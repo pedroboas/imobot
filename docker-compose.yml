@@ -1,0 +1,35 @@
+services:
+  # Scraper service: Orchestrates the scraping logic
+  scraper:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+      - BROWSER_WS_ENDPOINT=${BROWSER_WS_ENDPOINT}
+      - SCRAPE_INTERVAL=${SCRAPE_INTERVAL}
+    depends_on:
+      - db
+      - browser
+
+  # O Browser: Instância isolada para contornar o Cloudflare
+  browser:
+    image: browserless/chrome:latest
+    ports:
+      - "3000:3000"
+    restart: always
+
+  # A Base de Dados: Para não enviar anúncios repetidos
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: imoveis
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

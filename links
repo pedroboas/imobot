@@ -1,0 +1,39 @@
+# Target Search URLs
+# Add one URL per line. These links define which searches the scraper will monitor.
+# Empty lines are ignored.
+https://www.factorvalor.pt/imoveis/venda/apartamentos/braga-dst/barcelos?lbed=2&mrp=240000&srt=1
+
+
+https://www.factorvalor.pt/imoveis/venda/moradias/braga-dst/barcelos?lbed=2&mrp=240000&srt=1
+
+
+https://www.era.pt/imoveis/agencia/barcelosjardimvelho?ob=1&tp=1,2&ord=3&nqMin=2&nqMax=5&pvMax=250000&ir=1&nr=0&dt=03&co=03-02-00-0&page=1
+
+
+https://www.barcelcasa.pt/imoveis?mtype=1,2&bus=1&dst=3&mun=35&mrp=250000
+
+
+https://www.zome.pt/pt/pesquisar/comprar-casa/apartamento/moradia/t2/t3/t4/t5/l1-braga/l2-barcelos/total-max-240000
+
+https://www.concretaimobiliaria.pt/pt/imoveis/?pg=1&o=1&g=1&e=&pp=176&dd=03&cc=02&ff=&ml=&z=&nq=&p=-240000&a=&c=&es=&ct=00000001&or=30
+https://www.concretaimobiliaria.pt/pt/imoveis/?pg=1&o=1&g=2&e=&pp=176&dd=03&cc=02&ff=&ml=&z=&nq=&p=-240000&a=&c=&es=&ct=00000001&or=30
+
+
+https://franciscofaria.pt/imoveis/?keyword=&property_id=&location%5B%5D=barcelos&label%5B%5D=&type%5B%5D=apartamento&type%5B%5D=moradia&rooms=any&bathrooms=&status%5B%5D=&min-price=&max-price=&min-area=&max-area=
+https://www.remax.pt/pt/comprar/imoveis/apartamento,moradia/braga/barcelos/r/t2,preco__250000?s=%7B%22mio%22%3A%22true%22%2C%22mli%22%3A%22126281075-6%22%2C%22rg%22%3A%22Barcelos%22%2C%22cd%22%3A%2241.6784133%3B-8.7710292%3B41.3900137%3B-8.4694068%22%7D&p=1&o=-PublishDate
+
+https://www.haconchego.pt/conteudos/imoveis/default.aspx?pg=2&o=1&g=1&e=&pp=176&dd=03&cc=02&ff=&ml=&z=&nq=&p=-250000&a=&c=&es=&ct=00000001&or=30&idioma=pt&q=
+https://www.haconchego.pt/pt/imoveis/?pg=1&o=1&g=2&e=&pp=176&dd=03&cc=02&ff=&ml=&z=&nq=&p=-250000&a=&c=&es=&ct=00000001&or=30
+https://www.lardesonho.pt/pesquisar/?purposeId=240&propertyType=5433&minRoom=2&maxPrice=250000&countryId=6824&districtId=2202&countyId=2267&pageNo=1#content-target
+https://www.lardesonho.pt/pesquisar/?purposeId=240&propertyType=5434&minRoom=2&maxPrice=250000&countryId=6824&districtId=2202&countyId=2267&pageNo=1#content-target
+https://www.h-urb.com/imoveis?dst=3&mun=36&mtype=1,2&stpl=7&bus=1&mrp=250000
+
+https://www.olx.pt/imoveis/apartamento-casa-a-venda/apartamentos-venda/silva/?search%5Bdist%5D=10&search%5Bfilter_float_price:to%5D=250000&search%5Bfilter_enum_tipologia%5D%5B0%5D=t2&search%5Bfilter_enum_tipologia%5D%5B1%5D=t3&search%5Bfilter_enum_tipologia%5D%5B2%5D=t4
+https://www.olx.pt/imoveis/casas-moradias-para-arrendar-vender/moradias-venda/silva/?search%5Bdist%5D=10&search%5Bfilter_float_price:to%5D=250000&search%5Bfilter_enum_tipologia%5D%5B0%5D=t2&search%5Bfilter_enum_tipologia%5D%5B1%5D=t4&search%5Bfilter_enum_tipologia%5D%5B2%5D=t3&search%5Bfilter_enum_tipologia%5D%5B3%5D=t6&search%5Bfilter_enum_tipologia%5D%5B4%5D=t5
+
+
+https://www.imovirtual.com/pt/resultados/comprar/apartamento/braga/barcelos?priceMax=250000
+https://www.imovirtual.com/pt/resultados/comprar/moradia/braga/barcelos?limit=36&ownerTypeSingleSelect=ALL&priceMax=240000&by=DEFAULT&direction=DESC
+
+
+https://www.idealista.pt/comprar-casas/barcelos/com-preco-max_240000/
