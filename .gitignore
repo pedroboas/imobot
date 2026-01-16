@@ -6,3 +6,5 @@ __pycache__/
 .db
 imoveis.db
 .env
+*.log
+debug_*.html
