@@ -2,13 +2,14 @@ services:
   # Scraper service: Orchestrates the scraping logic
   scraper:
     build: .
+    restart: always
     volumes:
       - .:/app
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - CHAT_ID=${CHAT_ID}
-      - BROWSER_WS_ENDPOINT=${BROWSER_WS_ENDPOINT}
+      - BROWSER_WS_ENDPOINT=${BROWSER_WS_ENDPOINT:-ws://browser:3000}
       - SCRAPE_INTERVAL=${SCRAPE_INTERVAL}
     depends_on:
       - db
@@ -24,12 +25,31 @@ services:
   # A Base de Dados: Para não enviar anúncios repetidos
   db:
     image: postgres:15-alpine
+    restart: always
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: imoveis
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  # Dashboard: Monitoring UI
+  dashboard:
+    build: .
+    restart: always
+    command: python dashboard/app.py
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - PYTHONPATH=/app
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-novacasa2025!}
+    depends_on:
+      - db
+      - scraper
 
 volumes:
   postgres_data:

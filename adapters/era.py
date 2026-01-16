@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import re
+import hashlib
 
 def parse_era(html_content):
     """
@@ -10,43 +11,51 @@ def parse_era(html_content):
     properties = []
     
     # ERA listings often use 'property-item' or 'card-property'
-    listings = soup.find_all(['div', 'article'], class_=re.compile(r'property-item|card-property|listing-item', re.I))
+    # New structure uses div.card and a.card-anchor
+    listings = soup.find_all('div', class_=re.compile(r'card|property-item|listing-card|item-property', re.I))
     
     if not listings:
-        # Try finding by links that look like property links
-        all_links = soup.find_all('a', href=re.compile(r'/imovel/|/p/'))
-        for link in all_links:
-            parent = link.find_parent(['div', 'article'])
-            if parent and parent not in listings:
-                listings.append(parent)
+        # Fallback to links if classes aren't found
+        all_links = soup.find_all('a', class_=re.compile(r'card-anchor|card__gallery', re.I))
+        listings = [link.find_parent('div', class_=re.compile(r'card|body|content', re.I)) or link.parent.parent for link in all_links]
 
     for item in listings:
         try:
-            link_tag = item.find('a', href=True)
+            # Anchor tag contains the main info
+            link_tag = item.find('a', class_=re.compile(r'card-anchor|card__gallery', re.I)) or item.find('a', href=True)
             if not link_tag: continue
             
             url = link_tag['href']
             if url and not url.startswith('http'):
                 url = "https://www.era.pt" + url
                 
-            title_tag = item.find(['h2', 'h3', 'h4'])
+            # Title
+            title_tag = item.find(['h2', 'h3', 'h4']) or item.find(class_=re.compile(r'location|type', re.I)) or link_tag
             title = title_tag.get_text(strip=True) if title_tag else "ERA Property"
             
-            price_tag = item.find(class_=re.compile(r'price|valor', re.I))
-            if not price_tag:
-                 price_tag = item.find(string=re.compile(r'€', re.I))
+            # Price
+            price_tag = item.find('p', class_='price-value') or \
+                        item.find(class_=re.compile(r'price|valor|card__price', re.I)) or \
+                        item.find(string=re.compile(r'€', re.I))
             
             price = price_tag.get_text(strip=True) if hasattr(price_tag, 'get_text') else (price_tag if price_tag else "N/A")
             
-            prop_id = item.get('data-id') or re.search(r'/(\d+)$', url.split('?')[0])
-            if isinstance(prop_id, re.Match):
-                prop_id = prop_id.group(1)
+            # ID extraction from carousel ID or URL
+            prop_id = None
+            carousel = item.find('div', id=re.compile(r'carousel-(\d+)'))
+            if carousel:
+                prop_id = re.search(r'carousel-(\d+)', carousel['id']).group(1)
             
             if not prop_id:
-                prop_id = str(hash(url))
+                prop_id = item.get('data-id') or re.search(r'/(\d+)$', url.split('?')[0])
+                if prop_id and not isinstance(prop_id, str):
+                    prop_id = prop_id.group(1)
+            
+            if not prop_id:
+                prop_id = hashlib.md5(url.encode()).hexdigest()
 
             properties.append({
-                'id': prop_id,
+                'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,

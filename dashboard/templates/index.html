@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imobot | Monitorização</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <h1>IMO<span>BOT</span></h1>
+                <p>Real Estate Scraper Monitoring</p>
+            </div>
+            <div class="status-badge" id="bot-status">
+                <span class="dot"></span> Online
+            </div>
+            <button id="trigger-scan" class="btn-primary">FORÇAR VARREDURA</button>
+        </header>
+
+        <main class="grid">
+            <section class="panel stats-panel">
+                <h2>Estatísticas</h2>
+                <div class="stats-grid" id="stats-container">
+                    <div class="stat-card">
+                        <span class="label">Total Imóveis</span>
+                        <span class="value" id="total-props">...</span>
+                    </div>
+                </div>
+                <h3>Por Marketplace</h3>
+                <div class="sites-list" id="sites-list">
+                    <!-- Dinamicamente preenchido -->
+                </div>
+            </section>
+
+            <section class="panel logs-panel">
+                <div class="panel-header">
+                    <h2>Live Logs</h2>
+                    <span class="live-tag">REAL-TIME</span>
+                </div>
+                <div class="log-container" id="log-terminal">
+                    <div class="log-line system">A aguardar ligação à stream de logs...</div>
+                </div>
+            </section>
+
+            <section class="panel properties-panel">
+                <h2>Últimas Descobertas</h2>
+                <div class="properties-list" id="recent-properties">
+                    <!-- Dinamicamente preenchido -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('total-props').innerText = data.total_properties;
+                
+                const sitesList = document.getElementById('sites-list');
+                sitesList.innerHTML = '';
+                for (const [site, count] of Object.entries(data.by_site)) {
+                    sitesList.innerHTML += `
+                        <div class="site-item">
+                            <span class="site-name">${site}</span>
+                            <span class="site-count">${count}</span>
+                        </div>
+                    `;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function fetchRecentProperties() {
+            try {
+                const res = await fetch('/api/properties');
+                const data = await res.json();
+                const container = document.getElementById('recent-properties');
+                container.innerHTML = '';
+                data.forEach(p => {
+                    container.innerHTML += `
+                        <a href="${p.url}" target="_blank" class="prop-card">
+                            <div class="prop-info">
+                                <span class="prop-site">${p.site}</span>
+                                <span class="prop-title">${p.title}</span>
+                                <span class="prop-price">${p.price}</span>
+                            </div>
+                        </a>
+                    `;
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function setupWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const socket = new WebSocket(`${protocol}//${window.location.host}/ws/logs`);
+            const terminal = document.getElementById('log-terminal');
+
+            socket.onmessage = (event) => {
+                const line = document.createElement('div');
+                line.className = 'log-line';
+                if (event.data.includes('[ERROR]') || event.data.includes('[FALHA]')) line.classList.add('error');
+                if (event.data.includes('[SUCESSO]') || event.data.includes('NOVA')) line.classList.add('success');
+                line.innerText = event.data;
+                terminal.appendChild(line);
+                terminal.scrollTop = terminal.scrollHeight;
+                
+                // Keep only last 200 lines to prevent lag
+                if (terminal.children.length > 200) terminal.removeChild(terminal.firstChild);
+            };
+
+            socket.onclose = () => {
+                console.log("WebSocket closed. Reconnecting...");
+                setTimeout(setupWebSocket, 3000);
+            };
+        }
+
+        document.getElementById('trigger-scan').onclick = async () => {
+            const btn = document.getElementById('trigger-scan');
+            btn.disabled = true;
+            btn.innerText = 'A DISPARAR...';
+            await fetch('/api/trigger', { method: 'POST' });
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerText = 'FORÇAR VARREDURA';
+            }, 2000);
+        };
+
+        // Initial load
+        fetchStats();
+        fetchRecentProperties();
+        setupWebSocket();
+        setInterval(fetchStats, 10000);
+        setInterval(fetchRecentProperties, 30000);
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import re
+import hashlib
 
 def parse_imovirtual(html_content):
     """
@@ -10,36 +11,40 @@ def parse_imovirtual(html_content):
     properties = []
     
     # Imovirtual listings are usually in 'article' tags with data-testid="listing-item"
-    listings = soup.find_all('article', {'data-testid': 'listing-item'})
+    # New structure uses data-sentry-component="AdvertCard" or data-testid="listing-ad"
+    listings = soup.find_all('article', {'data-sentry-component': 'AdvertCard'}) or \
+               soup.find_all('article', {'data-testid': 'listing-ad'}) or \
+               soup.find_all('article', {'data-testid': 'listing-item'})
     
     for item in listings:
         try:
-            # Extract ID (usually in data-cy or part of the URL)
-            # Imovirtual often has id in data-item-id
-            prop_id = item.get('id') or item.get('data-item-id')
-            
-            # Title
-            title_tag = item.find('h3')
-            title = title_tag.get_text(strip=True) if title_tag else "Sem título"
-            
-            # URL
-            link_tag = item.find('a', href=True)
-            url = link_tag['href'] if link_tag else ""
+            # Title and URL mapping - New structure uses data-cy attributes
+            link_tag = item.find('a', {'data-cy': 'listing-item-link'}) or item.find('a', href=True)
+            if not link_tag:
+                continue
+
+            url = link_tag['href']
             if url and not url.startswith('http'):
                 url = "https://www.imovirtual.com" + url
+
+            title_tag = item.find('p', {'data-cy': 'listing-item-title'}) or \
+                        item.find('h3') or \
+                        link_tag
+            title = title_tag.get_text(strip=True) if title_tag else "Sem título"
             
             # Price
-            price_tag = item.find('span', string=re.compile(r'€'))
-            if not price_tag:
-                 price_tag = item.find('p', string=re.compile(r'€')) # Fallback
+            price_container = item.find('span', {'data-testid': 'listing-item-price'}) or \
+                              item.find(lambda tag: tag.name in ['span', 'p'] and '€' in tag.get_text())
             
-            # Sometimes price is in a specific data-testid
-            price_container = item.find('span', {'data-testid': 'listing-item-price'})
-            price = price_container.get_text(strip=True) if price_container else (price_tag.get_text(strip=True) if price_tag else "Preço sob consulta")
+            price = price_container.get_text(strip=True) if price_container else "Preço sob consulta"
 
-            if not prop_id and url:
-                # Fallback to URL hash if ID is missing
-                prop_id = str(hash(url))
+            # Prop ID extraction from URL (e.g., ...-ID1hDdP)
+            prop_id = None
+            id_match = re.search(r'-ID([a-zA-Z0-9]+)$', url)
+            if id_match:
+                prop_id = id_match.group(1)
+            else:
+                prop_id = item.get('id') or item.get('data-item-id') or hashlib.md5(url.encode()).hexdigest()
 
             properties.append({
                 'id': prop_id,

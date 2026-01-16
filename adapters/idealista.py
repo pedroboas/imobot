@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import re
+import hashlib
 
 def parse_idealista(html_content):
     """
@@ -41,7 +42,7 @@ def parse_idealista(html_content):
                 if match:
                     prop_id = match.group(1)
                 else:
-                    prop_id = str(hash(url))
+                    prop_id = hashlib.md5(url.encode()).hexdigest()
 
             properties.append({
                 'id': prop_id,

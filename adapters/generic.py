@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
+import hashlib
 
 BLACKLIST_KEYWORDS = [
     'facebook.com', 'whatsapp.com', 'twitter.com', 'pinterest.com', 
@@ -95,10 +96,10 @@ def parse_generic_logic(html_content, base_url):
                 
             # ID
             prop_id = item.get('id') or item.get('data-id') or item.get('data-ad-id')
-            if not prop_id and url:
-                # Use a mix of URL path and hash for better consistency
+            if not prop_id:
+                # Use a mix of URL path and hex hash for better consistency
                 path = urllib.parse.urlparse(url).path
-                prop_id = f"gen_{hash(path)}"
+                prop_id = f"gen_{hashlib.md5(path.encode()).hexdigest()}"
 
             if url and prop_id:
                 properties.append({

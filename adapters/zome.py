@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import re
+import hashlib
 
 def parse_zome(html_content):
     """
@@ -10,27 +11,33 @@ def parse_zome(html_content):
     properties = []
     
     # Zome listings often have 'property-card' or 'property-item'
-    listings = soup.find_all(['div', 'article'], class_=re.compile(r'property-card|property-item|card', re.I))
+    # New structure uses 'ListingPreviewItem'
+    listings = soup.find_all('div', class_=re.compile(r'ListingPreviewItem|property-card', re.I))
     
     for item in listings:
         try:
-            link_tag = item.find('a', href=True)
+            # Link and URL
+            link_tag = item.find('a', class_=re.compile(r'text-decoration-none', re.I)) or item.find('a', href=True)
             if not link_tag: continue
             
             url = link_tag['href']
             if url and not url.startswith('http'):
                 url = "https://www.zome.pt" + url
                 
-            title_tag = item.find(['h2', 'h3', 'h4'])
+            # Title
+            title_tag = item.find(['h2', 'h3', 'h4']) or link_tag
             title = title_tag.get_text(strip=True) if title_tag else "Zome Property"
             
-            price_tag = item.find(class_=re.compile(r'price|valor', re.I))
-            if not price_tag:
-                price_tag = item.find(string=re.compile(r'€', re.I))
-                
+            # Price
+            price_tag = item.find(class_=re.compile(r'price|valor|ListingPreviewItem__price', re.I)) or \
+                        item.find(string=re.compile(r'€', re.I))
+            
             price = price_tag.get_text(strip=True) if hasattr(price_tag, 'get_text') else (price_tag if price_tag else "N/A")
             
-            prop_id = item.get('data-id') or item.get('data-property-id') or str(hash(url))
+            # ID
+            # Zome often puts ZMPT ID in the URL
+            id_match = re.search(r'ZMPT(\d+)', url)
+            prop_id = id_match.group(0) if id_match else (item.get('data-id') or item.get('data-property-id') or hashlib.md5(url.encode()).hexdigest())
 
             properties.append({
                 'id': prop_id,

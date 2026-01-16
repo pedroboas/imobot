@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import re
+import hashlib
 
 def parse_custojusto(html_content):
     """
@@ -29,7 +30,7 @@ def parse_custojusto(html_content):
             price = price_tag.get_text(strip=True) if price_tag else "Preço não disponível"
 
             if not prop_id and url:
-                prop_id = str(hash(url))
+                prop_id = hashlib.md5(url.encode()).hexdigest()
 
             properties.append({
                 'id': prop_id,
