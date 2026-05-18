@@ -2,49 +2,58 @@ services:
   # Scraper service: Orchestrates the scraping logic
   scraper:
     build: .
-    restart: always
+    restart: unless-stopped
     volumes:
       - .:/app
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - CHAT_ID=${CHAT_ID}
-      - BROWSER_WS_ENDPOINT=${BROWSER_WS_ENDPOINT:-ws://browser:3000}
+      - BROWSER_WS_ENDPOINT=ws://browser:3000
       - SCRAPE_INTERVAL=${SCRAPE_INTERVAL}
+      - CONCURRENCY_LIMIT=${CONCURRENCY_LIMIT:-2}
     depends_on:
       - db
       - browser
+    networks:
+      - backend
+    dns:
+      - 8.8.8.8
 
-  # O Browser: Instância isolada para contornar o Cloudflare
+  # O Browser: Instância isolada
   browser:
     image: ghcr.io/browserless/chromium:latest
-    ports:
-      - "3000:3000"
-    restart: always
+    restart: unless-stopped
     environment:
       - TIMEOUT=120000
       - CONCURRENT=3
       - QUEUED=5
       - HEALTH=true
+    networks:
+      - backend
+    dns:
+      - 8.8.8.8
 
-  # A Base de Dados: Para não enviar anúncios repetidos
+  # A Base de Dados
   db:
     image: postgres:15-alpine
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: imoveis
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
 
   # Dashboard: Monitoring UI
   dashboard:
     build: .
-    restart: always
+    restart: unless-stopped
     command: python dashboard/app.py
     ports:
-      - "8080:8080"
+      - "8085:8080" # Mapeado para 8085 para não conflituar com o Pi-hole (8080)
     volumes:
       - .:/app
     environment:
@@ -53,6 +62,13 @@ services:
     depends_on:
       - db
       - scraper
+    networks:
+      - backend
 
 volumes:
   postgres_data:
+
+networks:
+  backend:
+    external: true
+    name: homeserver_backend

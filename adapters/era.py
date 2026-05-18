@@ -5,55 +5,95 @@ import hashlib
 def parse_era(html_content):
     """
     Parser for ERA.pt listings.
-    Targets elements with 'property-item' or 'card-property' classes.
+    ERA uses a standard server-rendered page with:
+      - div.card containers for each listing
+      - a.card__gallery links to property detail pages (/imovel/...)
+      - span/div with class 'card__price' or 'price-value' for prices
+      - h3/h4 or spans with location/type info for titles
     """
     soup = BeautifulSoup(html_content, 'html.parser')
     properties = []
-    
-    # ERA listings often use 'property-item' or 'card-property'
-    # New structure uses div.card and a.card-anchor
-    listings = soup.find_all('div', class_=re.compile(r'card|property-item|listing-card|item-property', re.I))
-    
-    if not listings:
-        # Fallback to links if classes aren't found
-        all_links = soup.find_all('a', class_=re.compile(r'card-anchor|card__gallery', re.I))
-        listings = [link.find_parent('div', class_=re.compile(r'card|body|content', re.I)) or link.parent.parent for link in all_links]
+    seen_ids = set()
 
-    for item in listings:
+    # Primary strategy: Find links to property detail pages
+    property_links = soup.find_all('a', href=re.compile(r'/imovel/', re.I))
+    
+    for link in property_links:
         try:
-            # Anchor tag contains the main info
-            link_tag = item.find('a', class_=re.compile(r'card-anchor|card__gallery', re.I)) or item.find('a', href=True)
-            if not link_tag: continue
-            
-            url = link_tag['href']
-            if url and not url.startswith('http'):
+            url = link['href']
+            if not url.startswith('http'):
                 url = "https://www.era.pt" + url
+            
+            # Extract property ID from URL: /imovel/venda-apartamento-.../123456
+            id_match = re.search(r'/(\d{4,})(?:\?|$|#)', url)
+            if not id_match:
+                # Try from URL path segments
+                id_match = re.search(r'/imovel/[^/]+/(\d+)', url)
+            
+            prop_id = id_match.group(1) if id_match else hashlib.md5(url.encode()).hexdigest()
+            
+            # Skip if already seen (multiple links per card)
+            if prop_id in seen_ids:
+                continue
+            seen_ids.add(prop_id)
+            
+            # Navigate up to find the card container
+            card = link.find_parent('div', class_=re.compile(r'card|listing|property', re.I))
+            if not card:
+                card = link.parent
+                for _ in range(5):
+                    if card is None:
+                        break
+                    if card.name == 'div' and card.get('class'):
+                        break
+                    card = card.parent
+            
+            if not card:
+                card = link.parent
+            
+            # Title: combine location + type info
+            title = ""
+            
+            # Try structured title elements
+            if card:
+                title_tag = card.find(['h2', 'h3', 'h4'])
+                if title_tag:
+                    title = title_tag.get_text(strip=True)
                 
-            # Title
-            title_tag = item.find(['h2', 'h3', 'h4']) or item.find(class_=re.compile(r'location|type', re.I)) or link_tag
-            title = title_tag.get_text(strip=True) if title_tag else "ERA Property"
+                if not title or len(title) < 5:
+                    # Look for card__type and card__location classes
+                    type_el = card.find(class_=re.compile(r'card__type|type|tipologia', re.I))
+                    loc_el = card.find(class_=re.compile(r'card__location|location|localizacao|morada', re.I))
+                    
+                    parts = []
+                    if type_el:
+                        parts.append(type_el.get_text(strip=True))
+                    if loc_el:
+                        parts.append(loc_el.get_text(strip=True))
+                    if parts:
+                        title = ' - '.join(parts)
+            
+            if not title or len(title) < 5:
+                title = link.get('title', '') or link.get_text(strip=True)[:100]
+            if not title or len(title) < 3:
+                title = "ERA Property"
             
             # Price
-            price_tag = item.find('p', class_='price-value') or \
-                        item.find(class_=re.compile(r'price|valor|card__price', re.I)) or \
-                        item.find(string=re.compile(r'€', re.I))
+            price = "N/A"
+            if card:
+                price_tag = card.find(class_=re.compile(r'price|valor|card__price', re.I))
+                if price_tag:
+                    price = price_tag.get_text(strip=True)
+                else:
+                    # Look for € symbol
+                    price_text = card.find(string=re.compile(r'[\d.,]+\s*€', re.I))
+                    if price_text:
+                        price = price_text.strip()
             
-            price = price_tag.get_text(strip=True) if hasattr(price_tag, 'get_text') else (price_tag if price_tag else "N/A")
+            # Skip entries that don't look like real properties
+            if 'agencia' in url.lower() or '/comprar' == url.rstrip('/').lower():
+                continue
             
-            # ID extraction from carousel ID or URL
-            prop_id = None
-            carousel = item.find('div', id=re.compile(r'carousel-(\d+)'))
-            if carousel:
-                prop_id = re.search(r'carousel-(\d+)', carousel['id']).group(1)
-            
-            if not prop_id:
-                prop_id = item.get('data-id') or re.search(r'/(\d+)$', url.split('?')[0])
-                if prop_id and not isinstance(prop_id, str):
-                    prop_id = prop_id.group(1)
-            
-            if not prop_id:
-                prop_id = hashlib.md5(url.encode()).hexdigest()
-
             properties.append({
                 'id': str(prop_id),
                 'title': title,
@@ -61,7 +101,43 @@ def parse_era(html_content):
                 'price': price,
                 'site': 'era'
             })
-        except:
+        except Exception:
             continue
+    
+    # Fallback: If no property links found, try card-based approach
+    if not properties:
+        listings = soup.find_all('div', class_=re.compile(r'card', re.I))
+        for item in listings:
+            try:
+                link_tag = item.find('a', href=True)
+                if not link_tag:
+                    continue
+                
+                url = link_tag['href']
+                if '/imovel/' not in url.lower():
+                    continue
+                if not url.startswith('http'):
+                    url = "https://www.era.pt" + url
+                
+                title_tag = item.find(['h2', 'h3', 'h4'])
+                title = title_tag.get_text(strip=True) if title_tag else "ERA Property"
+                
+                price_tag = item.find(class_=re.compile(r'price|valor', re.I))
+                price = price_tag.get_text(strip=True) if price_tag else "N/A"
+                
+                id_match = re.search(r'/(\d{4,})', url)
+                prop_id = id_match.group(1) if id_match else hashlib.md5(url.encode()).hexdigest()
+                
+                if prop_id not in seen_ids:
+                    seen_ids.add(prop_id)
+                    properties.append({
+                        'id': str(prop_id),
+                        'title': title,
+                        'url': url,
+                        'price': price,
+                        'site': 'era'
+                    })
+            except Exception:
+                continue
             
     return properties

@@ -5,26 +5,13 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker
-from database import Base, Property, get_session
+from database import Base, Property, ScrapeLog, RunSummary, get_session
 import json
 import secrets
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 app = FastAPI()
-security = HTTPBasic()
-
-def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = os.getenv("DASHBOARD_USER", "admin") 
-    correct_password = secrets.compare_digest(credentials.password, os.getenv("DASHBOARD_PASSWORD", "admin"))
-    
-    if not (secrets.compare_digest(credentials.username, correct_username) and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
 
 # Setup paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,11 +20,11 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 
 LOG_FILE = "/app/scraper.log"
 
-@app.get("/", dependencies=[Depends(get_current_username)])
+@app.get("/")
 async def get_dashboard(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/api/stats", dependencies=[Depends(get_current_username)])
+@app.get("/api/stats")
 async def get_stats():
     with get_session() as session:
         total = session.query(Property).count()
@@ -52,7 +39,7 @@ async def get_stats():
             "status": "Online" # In a real scenario, we could check if scraper process is alive
         }
 
-@app.get("/api/properties", dependencies=[Depends(get_current_username)])
+@app.get("/api/properties")
 async def get_recent_properties():
     with get_session() as session:
         props = session.query(Property).order_by(desc(Property.found_at)).limit(10).all()
@@ -66,6 +53,42 @@ async def get_recent_properties():
                 "found_at": p.found_at.isoformat()
             } for p in props
         ]
+
+@app.get("/api/health")
+async def get_health():
+    with get_session() as session:
+        # Get the latest run
+        latest_run = session.query(RunSummary).order_by(desc(RunSummary.created_at)).first()
+        if not latest_run:
+            return {"latest_run": None, "site_health": []}
+        
+        # Get site health for the latest run
+        site_logs = session.query(ScrapeLog).filter(ScrapeLog.run_id == latest_run.run_id).all()
+        
+        site_health = []
+        for log in site_logs:
+            site_health.append({
+                "site": log.site,
+                "status": log.status,
+                "found": log.found_count,
+                "valid": log.valid_count,
+                "new": log.new_count,
+                "error": log.error_message,
+                "duration": log.duration_seconds
+            })
+            
+        return {
+            "latest_run": {
+                "id": latest_run.run_id,
+                "created_at": latest_run.created_at.isoformat(),
+                "duration": latest_run.duration_seconds,
+                "success": latest_run.success_count,
+                "error": latest_run.error_count,
+                "blocked": latest_run.blocked_count,
+                "total_found": latest_run.total_found
+            },
+            "site_health": site_health
+        }
 
 @app.websocket("/ws/logs")
 async def websocket_logs(websocket: WebSocket):
@@ -94,7 +117,7 @@ async def websocket_logs(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
-@app.post("/api/trigger", dependencies=[Depends(get_current_username)])
+@app.post("/api/trigger")
 async def trigger_scan():
     # In this Docker setup, a simple way to trigger is to create a signal file
     # that the scraper.py checks periodically or use a more advanced IPC.

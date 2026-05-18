@@ -36,13 +36,8 @@ MIN_PRICE=100000
 
 # Browserless (Docker interno)
 BROWSER_WS_ENDPOINT=ws://browser:3000
-
-# 🔐 Autenticação Dashboard
-DASHBOARD_USER=admin
-DASHBOARD_PASSWORD=novacasa2025!
 ```
 
-> **Nota:** Altere o `DASHBOARD_USER` e `DASHBOARD_PASSWORD` se desejar outra combinação.
 
 ## 🌐 3. Configuração do Nginx
 Para deixar o dashboard acessível "ao mundo" de forma segura, vamos configurar o Nginx para redirecionar o tráfego.
@@ -93,9 +88,7 @@ O comando irá:
 
 ## ✅ 5. Verificação
 1.  Aceda ao seu IP ou domínio no browser: `http://seu-dominio.com`
-2.  Deverá aparecer uma janela de login.
-3.  Insira as credenciais definidas no `.env` (`admin` / `novacasa2025!`).
-4.  Se vir o painel e os logs começarem a aparecer na secção "Logs em Tempo Real", está tudo pronto!
+2.  Se vir o painel e os logs começarem a aparecer na secção "Logs em Tempo Real", está tudo pronto!
 
 ---
 **Segurança**: A base de dados Postgres está configurada para **não** expor portas para a internet, comunicando apenas internamente com o scraper e o dashboard.

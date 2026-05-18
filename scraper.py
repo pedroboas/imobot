@@ -20,11 +20,12 @@ import html
 import logging
 import random
 import re
+import uuid
 from playwright.async_api import async_playwright
 from dotenv import load_dotenv
 
 # Import local modules for database and specialized site adapters
-from database import init_db, is_property_new, save_property
+from database import init_db, is_property_new, save_property, save_scrape_log, save_run_summary
 from adapters.imovirtual import parse_imovirtual
 from adapters.idealista import parse_idealista
 from adapters.olx import parse_olx
@@ -35,6 +36,9 @@ from adapters.zome import parse_zome
 from adapters.era import parse_era
 from adapters.franciscofaria import parse_franciscofaria
 from adapters.factorvalor import parse_factorvalor
+from adapters.decisoesesolucoes import parse_decisoesesolucoes
+from adapters.hurb import parse_hurb
+from adapters.lardesonho import parse_lardesonho
 from adapters.generic import parse_generic_logic
 
 # Load environment variables
@@ -77,6 +81,23 @@ PARSERS = {
     "era.pt": parse_era,
     "franciscofaria.pt": parse_franciscofaria,
     "factorvalor.pt": parse_factorvalor,
+    "decisoesesolucoes.com": parse_decisoesesolucoes,
+    "h-urb.com": parse_hurb,
+    "lardesonho.pt": parse_lardesonho,
+}
+
+# Site-specific CSS selectors to wait for before extracting content.
+# These sites use dynamic JS rendering (SPA/React/Next.js) and need
+# the browser to wait until these elements appear in the DOM.
+SITE_WAIT_SELECTORS = {
+    "factorvalor.pt": ".propertyItem, .propertyItemWrap",
+    "h-urb.com": ".propertyItem, .propertyItemWrap",
+    "zome.pt": "a[href*='/imovel/'], .ListingPreviewItem, [class*='ListingPreview']",
+    "remax.pt": "a[href*='/imoveis/venda'], a[href*='/imovel/'], [class*='listing-card']",
+    "era.pt": "a[href*='/imovel/'], a.card__gallery",
+    "barcelcasa.pt": ".propertyItem, .propertyItemWrap",
+    "haconchego.pt": ".propertyItem, .propertyItemWrap",
+    "lardesonho.pt": "a[href*='/imovel/'], .destaque-box-wrapper, .overlay-price-wrapper",
 }
 
 def send_telegram_message_sync(message):
@@ -154,7 +175,12 @@ class BrowserManager:
                 try:
                     if BROWSER_WS_ENDPOINT:
                         logger.info(f"Conectando ao browser em {BROWSER_WS_ENDPOINT}...")
-                        self._browser = await self._playwright.chromium.connect_over_cdp(BROWSER_WS_ENDPOINT)
+                        # Try Browserless v2 connect() first, then v1 connect_over_cdp()
+                        try:
+                            self._browser = await self._playwright.chromium.connect(BROWSER_WS_ENDPOINT)
+                        except Exception:
+                            logger.info("connect() falhou, tentando connect_over_cdp()...")
+                            self._browser = await self._playwright.chromium.connect_over_cdp(BROWSER_WS_ENDPOINT)
                     else:
                         logger.info("Iniciando browser local (headless)...")
                         self._browser = await self._playwright.chromium.launch(headless=True)
@@ -184,8 +210,58 @@ class BrowserManager:
         if self._playwright:
             await self._playwright.stop()
 
-async def scrape_site(browser_manager, search_url, counter_text):
+
+async def _dismiss_cookie_consent(page):
+    """
+    Attempts to dismiss cookie consent banners by clicking common accept buttons.
+    This runs silently — failures are ignored since not all sites have consent banners.
+    """
+    consent_selectors = [
+        # Common Portuguese consent button patterns
+        'button[id*="cookie"][id*="accept"]',
+        'button[id*="cookie"][id*="aceitar"]',
+        'button[class*="cookie"][class*="accept"]',
+        'button[class*="consent"][class*="accept"]',
+        'a[id*="cookie"][id*="accept"]',
+        '#acceptCookies',
+        '#accept-cookies',
+        '#cookie-accept',
+        '.cookie-accept',
+        'button.accept-cookies',
+        # GDPR / CMP frameworks
+        '#onetrust-accept-btn-handler',
+        '.onetrust-close-btn-handler',
+        '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
+        '#CybotCookiebotDialogBodyButtonAccept',
+        '[data-action="accept"]',
+        'button[data-testid="cookie-accept"]',
+        # Generic patterns
+        'button:has-text("Aceitar")',
+        'button:has-text("Aceitar todos")',
+        'button:has-text("Aceitar tudo")',
+        'button:has-text("Accept")',
+        'button:has-text("Accept All")',
+        'button:has-text("Concordo")',
+        'button:has-text("OK")',
+        'a:has-text("Aceitar")',
+    ]
+    
+    for selector in consent_selectors:
+        try:
+            btn = page.locator(selector).first
+            if await btn.is_visible(timeout=500):
+                await btn.click(timeout=2000)
+                logger.info(f"Cookie consent dismissed via: {selector}")
+                await asyncio.sleep(1)
+                return True
+        except:
+            continue
+    return False
+
+async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
     max_retries = 3
+    site_start = time.time()
+    cookie_was_dismissed = False
     
     for attempt in range(max_retries):
         context = None
@@ -217,41 +293,63 @@ async def scrape_site(browser_manager, search_url, counter_text):
                     raise Exception("Browser disconnected during navigation")
                 raise e
 
-            # Specific wait for FactorValor (Dynamic Loading)
-            if "factorvalor.pt" in search_url:
-                try:
-                    logger.info("Aguardando carregamento dinâmico (FactorValor)...")
-                    # Wait for at least one property item to appear
-                    await page.wait_for_selector(".propertyItem", timeout=30000)
-                except:
-                    logger.warning(f"Timeout ao aguardar elementos no FactorValor: {search_url}")
+            # Dismiss cookie consent banners (common on Portuguese sites)
+            cookie_was_dismissed = await _dismiss_cookie_consent(page)
+
+            # Site-specific wait for dynamic/SPA content
+            for domain, selector in SITE_WAIT_SELECTORS.items():
+                if domain in search_url:
+                    try:
+                        logger.info(f"Aguardando carregamento dinâmico ({domain})...")
+                        await page.wait_for_selector(selector, timeout=30000)
+                        logger.info(f"Elementos encontrados para {domain}")
+                    except:
+                        logger.warning(f"Timeout ao aguardar elementos ({domain}): {search_url}")
+                    break
 
             await asyncio.sleep(2)
             
-            # Auto-scroll
+            # Auto-scroll to trigger lazy loading
             for i in range(3):
                 try:
                     await page.evaluate(f"window.scrollTo(0, document.body.scrollHeight * {i+1} / 3)")
                 except:
                     pass
                 await asyncio.sleep(1)
+            
+            # Scroll back to top and wait a bit more for any final renders
+            try:
+                await page.evaluate("window.scrollTo(0, 0)")
+            except:
+                pass
+            await asyncio.sleep(1)
 
             content = await page.content()
+            html_size = len(content)
             
             parser_func = get_parser(search_url)
             parser_name = parser_func.__name__ if parser_func else "parse_generic_logic"
             
-            logger.info(f"[{parser_name}] HTML Len: {len(content)}")
+            logger.info(f"[{parser_name}] HTML Len: {html_size}")
 
             if parser_func:
                 found_properties = parser_func(content)
             else:
                 found_properties = parse_generic_logic(content, search_url)
 
+            # Determine site name for logging
+            site_domain = search_url.split('/')[2].replace('www.', '')
+
             # Check for generic "blocked" signals if 0 results
             if len(found_properties) == 0:
                 if "captcha" in content.lower() or "acesso negado" in content.lower() or "access denied" in content.lower():
                      logger.warning(f"BLOCKED: {search_url}")
+                     duration = int(time.time() - site_start)
+                     await asyncio.to_thread(
+                         save_scrape_log, run_id, search_url, site_domain,
+                         'blocked', 0, 0, 0, 'Blocked/Captcha', html_size,
+                         parser_name, duration, cookie_was_dismissed
+                     )
                      return {"url": search_url, "status": "❌", "found": 0, "new": 0, "error": "Blocked/Captcha"}
 
             valid_properties = []
@@ -293,6 +391,16 @@ async def scrape_site(browser_manager, search_url, counter_text):
                 except Exception as e_db:
                     logger.error(f"Erro DB/Telegram: {e_db}")
             
+            # Save scrape log to DB
+            duration = int(time.time() - site_start)
+            log_status = 'success' if found_properties else 'empty'
+            await asyncio.to_thread(
+                save_scrape_log, run_id, search_url, site_domain,
+                log_status, len(found_properties), len(valid_properties),
+                new_count_site, None, html_size, parser_name, duration,
+                cookie_was_dismissed
+            )
+            
             return {"url": search_url, "status": "✅", "found": len(found_properties), "new": new_count_site}
 
         except Exception as e:
@@ -302,16 +410,23 @@ async def scrape_site(browser_manager, search_url, counter_text):
             if is_connection_error:
                 logger.warning(f"[CRITICAL] Browser Error: {error_msg}. Restarting manager...")
                 await browser_manager.restart()
-                # If we have retries left, continue loop
                 if attempt < max_retries - 1:
                     await asyncio.sleep(5)
                     continue
             
-            # Normal loop retry for other errors
             if attempt < max_retries - 1:
                 logger.warning(f"[RETRY] {search_url}: {error_msg}. Sleeping...")
                 await asyncio.sleep(5)
                 continue
+            
+            # Final failure — log to DB
+            duration = int(time.time() - site_start)
+            site_domain = search_url.split('/')[2].replace('www.', '')
+            await asyncio.to_thread(
+                save_scrape_log, run_id, search_url, site_domain,
+                'error', 0, 0, 0, error_msg[:200], 0,
+                None, duration, False
+            )
             
             return {"url": search_url, "status": "❌", "found": 0, "new": 0, "error": error_msg[:50]}
             
@@ -320,7 +435,7 @@ async def scrape_site(browser_manager, search_url, counter_text):
                 try: await context.close()
                 except: pass
 
-async def worker(name, queue, browser_manager, results):
+async def worker(name, queue, browser_manager, results, run_id):
     logger.info(f"Worker {name} started.")
     while True:
         try:
@@ -332,7 +447,7 @@ async def worker(name, queue, browser_manager, results):
         counter_text = f"[{index+1}/{total}]"
         
         try:
-            res = await scrape_site(browser_manager, url, counter_text)
+            res = await scrape_site(browser_manager, url, counter_text, run_id)
             results.append(res)
         except Exception as e:
             logger.error(f"Worker {name} failed on {url}: {e}")
@@ -341,7 +456,9 @@ async def worker(name, queue, browser_manager, results):
             queue.task_done()
 
 async def run_scraper():
-    logger.info("Iniciando nova pesquisa (Async/Queue)...")
+    run_id = str(uuid.uuid4())[:8]  # Short unique ID for this run
+    run_start = time.time()
+    logger.info(f"Iniciando nova pesquisa [run={run_id}]...")
 
     if not os.path.exists(LINKS_FILE):
         logger.error(f"Arquivo '{LINKS_FILE}' não encontrado.")
@@ -367,37 +484,40 @@ async def run_scraper():
         results = []
         workers = []
         for i in range(CONCURRENCY_LIMIT):
-            task = asyncio.create_task(worker(f"W-{i+1}", queue, browser_manager, results))
+            task = asyncio.create_task(worker(f"W-{i+1}", queue, browser_manager, results, run_id))
             workers.append(task)
             
         await asyncio.gather(*workers)
         
         # Summary
         total_new_found = sum(r['new'] for r in results)
-        logger.info("="*50)
-        logger.info("RELATÓRIO DE VERIFICAÇÃO FINAL:")
+        success_count = sum(1 for r in results if r['status'] == '✅')
+        error_count = sum(1 for r in results if r['status'] == '❌' and r.get('error') != 'Blocked/Captcha')
+        blocked_count = sum(1 for r in results if r.get('error') == 'Blocked/Captcha')
+        total_found = sum(r['found'] for r in results)
         
-        summary_lines = ["📋 <b>Resumo de Verificação:</b>", ""]
+        logger.info("="*50)
+        logger.info(f"RELATÓRIO [run={run_id}]:")
         
         for r in results:
             if r['status'] == "✅":
                 logger.info(f"{r['status']} {r['url']} - Encontrados: {r['found']} (Novos: {r['new']})")
-                summary_lines.append(f"{r['status']} {r['url'][:40]}... <b>({r['found']})</b>")
             else:
                 logger.info(f"{r['status']} {r['url']} - Erro: {r.get('error')}")
-                summary_lines.append(f"❌ {r['url'][:40]}... (<i>{r.get('error')}</i>)")
         
         logger.info("="*50)
-
-        final_msg = (
-            f"✅ <b>Ciclo Completo (Queue)</b>\n"
-            f"Novas Casas: <b>{total_new_found}</b>\n\n"
-            + "\n".join(summary_lines)
+        
+        # Save run summary to DB
+        run_duration = int(time.time() - run_start)
+        await asyncio.to_thread(
+            save_run_summary, run_id, total_links, success_count,
+            error_count, blocked_count, total_found, total_new_found,
+            run_duration
         )
         
-        # Summary report is only logged, not sent to Telegram anymore as per user request
-        # await send_telegram_message(final_msg[:4090]) 
-        logger.info(f"Ciclo concluído. {total_new_found} novas casas no total.")
+        logger.info(f"Ciclo [{run_id}] concluído em {run_duration}s. "
+                    f"✅{success_count} ❌{error_count} 🚫{blocked_count} | "
+                    f"Encontrados: {total_found} | Novos: {total_new_found}")
 
     finally:
         await browser_manager.stop()

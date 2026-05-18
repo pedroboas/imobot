@@ -1,70 +1,121 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Imobot | Monitorização</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <div class="glass-bg"></div>
     <div class="container">
         <header>
             <div class="logo">
                 <h1>IMO<span>BOT</span></h1>
-                <p>Real Estate Scraper Monitoring</p>
+                <p>Real Estate Scraper &bull; Dashboard</p>
             </div>
             <div class="status-badge" id="bot-status">
-                <span class="dot"></span> Online
+                <span class="dot"></span> Online &bull; Monitoring
             </div>
-            <button id="trigger-scan" class="btn-primary">FORÇAR VARREDURA</button>
+            <button id="trigger-scan" class="btn-primary">
+                <span>Varrer Agora</span>
+            </button>
         </header>
 
         <main class="grid">
+            <!-- Sidebar Stats -->
             <section class="panel stats-panel">
-                <h2>Estatísticas</h2>
-                <div class="stats-grid" id="stats-container">
-                    <div class="stat-card">
-                        <span class="label">Total Imóveis</span>
-                        <span class="value" id="total-props">...</span>
-                    </div>
+                <div class="stat-card">
+                    <span class="label">Total Encontrado</span>
+                    <span class="value" id="total-props">...</span>
                 </div>
-                <h3>Por Marketplace</h3>
+
+                <h2>Fontes de Dados</h2>
                 <div class="sites-list" id="sites-list">
                     <!-- Dinamicamente preenchido -->
+                    <div class="site-item" style="opacity: 0.5;">
+                        <span class="site-name">A carregar...</span>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 2rem;">Saúde do Sistema (Último Ciclo)</h2>
+                <div class="sites-list" id="health-list">
+                    <div class="site-item" style="opacity: 0.5;">
+                        <span class="site-name">A carregar...</span>
+                    </div>
                 </div>
             </section>
 
-            <section class="panel logs-panel">
-                <div class="panel-header">
-                    <h2>Live Logs</h2>
-                    <span class="live-tag">REAL-TIME</span>
-                </div>
-                <div class="log-container" id="log-terminal">
-                    <div class="log-line system">A aguardar ligação à stream de logs...</div>
-                </div>
-            </section>
+            <!-- Main Content Area -->
+            <div style="display: flex; flex-direction: column; gap: 2rem; min-width: 0;">
 
-            <section class="panel properties-panel">
-                <h2>Últimas Descobertas</h2>
-                <div class="properties-list" id="recent-properties">
-                    <!-- Dinamicamente preenchido -->
-                </div>
-            </section>
+                <!-- Logs Terminal -->
+                <section class="panel logs-panel">
+                    <div class="panel-header">
+                        <h2>System Logs</h2>
+                        <span class="live-tag">LIVE FEED</span>
+                    </div>
+                    <div class="log-container" id="log-terminal">
+                        <div class="log-line system">> Initializing Imobot Dashboard System...</div>
+                        <div class="log-line system">> Waiting for connection to scraper agent...</div>
+                    </div>
+                </section>
+
+                <!-- Recent Properties Grid -->
+                <section class="panel properties-panel">
+                    <h2>Últimas Descobertas</h2>
+                    <div class="properties-list" id="recent-properties">
+                        <!-- Card Template Example (Loading state) -->
+                        <div class="card-skeleton"
+                            style="height: 150px; background: rgba(255,255,255,0.02); border-radius: 16px;"></div>
+                        <div class="card-skeleton"
+                            style="height: 150px; background: rgba(255,255,255,0.02); border-radius: 16px;"></div>
+                        <div class="card-skeleton"
+                            style="height: 150px; background: rgba(255,255,255,0.02); border-radius: 16px;"></div>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
     <script>
+        // --- Interactions ---
+        // Mouse movement tracker for glow effects
+        const cards = document.getElementsByClassName('prop-card');
+
+        document.body.onmousemove = e => {
+            for (const card of document.getElementsByClassName('prop-card')) {
+                const rect = card.getBoundingClientRect(),
+                    x = e.clientX - rect.left,
+                    y = e.clientY - rect.top;
+
+                card.style.setProperty("--mouse-x", `${x}px`);
+                card.style.setProperty("--mouse-y", `${y}px`);
+            }
+        };
+
+        // --- Data Fetching ---
+
         async function fetchStats() {
             try {
                 const res = await fetch('/api/stats');
                 const data = await res.json();
+
+                // Animate number if changed (simple implementation)
                 document.getElementById('total-props').innerText = data.total_properties;
-                
+
                 const sitesList = document.getElementById('sites-list');
                 sitesList.innerHTML = '';
-                for (const [site, count] of Object.entries(data.by_site)) {
+
+                // Sort by count desc
+                const sortedSites = Object.entries(data.by_site).sort((a, b) => b[1] - a[1]);
+
+                for (const [site, count] of sortedSites) {
                     sitesList.innerHTML += `
                         <div class="site-item">
                             <span class="site-name">${site}</span>
@@ -72,7 +123,48 @@
                         </div>
                     `;
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Stats fetch error:", e); }
+        }
+
+        async function fetchHealth() {
+            try {
+                const res = await fetch('/api/health');
+                const data = await res.json();
+
+                const healthList = document.getElementById('health-list');
+                healthList.innerHTML = '';
+
+                if (!data.latest_run) {
+                    healthList.innerHTML = '<div class="site-item"><span class="site-name">Nenhum ciclo registado.</span></div>';
+                    return;
+                }
+
+                // Append run summary overview
+                healthList.innerHTML += `
+                    <div class="site-item" style="border-bottom: 1px solid var(--glass-border); border-radius: 0; background: transparent;">
+                        <span class="site-name" style="font-size: 0.8rem; color: var(--text-secondary);">Duração: ${data.latest_run.duration}s | Sucesso: <span style="color: var(--success);">${data.latest_run.success}</span> | Erro: <span style="color: var(--danger);">${data.latest_run.error}</span> | Bloqueados: <span style="color: var(--danger);">${data.latest_run.blocked}</span></span>
+                    </div>
+                `;
+
+                data.site_health.forEach(log => {
+                    let statusColor = log.status === 'success' ? 'var(--success)' : 
+                                      log.status === 'empty' ? 'var(--text-secondary)' : 'var(--danger)';
+                    let statusIcon = log.status === 'success' ? '✅' :
+                                     log.status === 'empty' ? '⚪' : '❌';
+                    let errorTooltip = log.error ? `title="${log.error}"` : '';
+
+                    healthList.innerHTML += `
+                        <div class="site-item" ${errorTooltip}>
+                            <span class="site-name" style="color: ${statusColor}; font-size: 0.9rem;">
+                                ${statusIcon} ${log.site}
+                            </span>
+                            <span class="site-count" style="font-size: 0.75rem;">
+                                ${log.found} obj. / ${log.duration}s
+                            </span>
+                        </div>
+                    `;
+                });
+            } catch (e) { console.error("Health fetch error:", e); }
         }
 
         async function fetchRecentProperties() {
@@ -80,19 +172,31 @@
                 const res = await fetch('/api/properties');
                 const data = await res.json();
                 const container = document.getElementById('recent-properties');
+
+                // Only update if content changed to avoid flicker/resetting hover states too aggressively?
+                // For now, simple replace.
                 container.innerHTML = '';
+
                 data.forEach(p => {
+                    // Create formatted price
+                    const formattedPrice = p.price;
+
                     container.innerHTML += `
                         <a href="${p.url}" target="_blank" class="prop-card">
                             <div class="prop-info">
                                 <span class="prop-site">${p.site}</span>
-                                <span class="prop-title">${p.title}</span>
-                                <span class="prop-price">${p.price}</span>
+                                <span class="prop-title" title="${p.title}">${p.title}</span>
+                            </div>
+                            <div class="prop-footer">
+                                <span class="prop-price">${formattedPrice}</span>
+                                <div class="prop-link-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                                </div>
                             </div>
                         </a>
                     `;
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Properties fetch error:", e); }
         }
 
         function setupWebSocket() {
@@ -104,12 +208,13 @@
                 const line = document.createElement('div');
                 line.className = 'log-line';
                 if (event.data.includes('[ERROR]') || event.data.includes('[FALHA]')) line.classList.add('error');
-                if (event.data.includes('[SUCESSO]') || event.data.includes('NOVA')) line.classList.add('success');
-                line.innerText = event.data;
+                if (event.data.includes('[SUCESSO]') || event.data.includes('NOVA') || event.data.includes('Found')) line.classList.add('success');
+                if (event.data.includes('Starting') || event.data.includes('browser')) line.classList.add('system');
+
+                line.innerText = `> ${event.data}`;
                 terminal.appendChild(line);
                 terminal.scrollTop = terminal.scrollHeight;
-                
-                // Keep only last 200 lines to prevent lag
+
                 if (terminal.children.length > 200) terminal.removeChild(terminal.firstChild);
             };
 
@@ -121,21 +226,32 @@
 
         document.getElementById('trigger-scan').onclick = async () => {
             const btn = document.getElementById('trigger-scan');
+            const originalText = btn.innerHTML;
             btn.disabled = true;
-            btn.innerText = 'A DISPARAR...';
-            await fetch('/api/trigger', { method: 'POST' });
+            btn.innerHTML = '<span>Iniciando...</span>';
+
+            try {
+                await fetch('/api/trigger', { method: 'POST' });
+                btn.innerHTML = '<span>Solicitado!</span>';
+            } catch (e) {
+                btn.innerHTML = '<span>Erro</span>';
+            }
+
             setTimeout(() => {
                 btn.disabled = false;
-                btn.innerText = 'FORÇAR VARREDURA';
-            }, 2000);
+                btn.innerHTML = '<span>Varrer Agora</span>';
+            }, 3000);
         };
 
         // Initial load
         fetchStats();
+        fetchHealth();
         fetchRecentProperties();
         setupWebSocket();
         setInterval(fetchStats, 10000);
+        setInterval(fetchHealth, 15000);
         setInterval(fetchRecentProperties, 30000);
     </script>
 </body>
+
 </html>
