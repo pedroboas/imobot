@@ -70,5 +70,3 @@ volumes:
 
 networks:
   backend:
-    external: true
-    name: homeserver_backend
