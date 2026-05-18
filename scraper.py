@@ -178,9 +178,9 @@ class BrowserManager:
                         # Try Browserless v2 connect() first, then v1 connect_over_cdp()
                         try:
                             self._browser = await self._playwright.chromium.connect(BROWSER_WS_ENDPOINT)
-                        except Exception:
-                            logger.info("connect() falhou, tentando connect_over_cdp()...")
-                            self._browser = await self._playwright.chromium.connect_over_cdp(BROWSER_WS_ENDPOINT)
+                        except Exception as e:
+                            logger.error(f"connect() falhou com erro: {e}")
+                            raise
                     else:
                         logger.info("Iniciando browser local (headless)...")
                         self._browser = await self._playwright.chromium.launch(headless=True)
