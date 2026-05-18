@@ -176,11 +176,17 @@ class BrowserManager:
                     if BROWSER_WS_ENDPOINT:
                         logger.info(f"Conectando ao browser em {BROWSER_WS_ENDPOINT}...")
                         # Try Browserless v2 connect() first, then v1 connect_over_cdp()
-                        try:
-                            self._browser = await self._playwright.chromium.connect(BROWSER_WS_ENDPOINT)
-                        except Exception as e:
-                            logger.error(f"connect() falhou com erro: {e}")
-                            raise
+                        import asyncio
+                        for attempt in range(5):
+                            try:
+                                self._browser = await self._playwright.chromium.connect(BROWSER_WS_ENDPOINT)
+                                break
+                            except Exception as e:
+                                if attempt == 4:
+                                    logger.error(f"connect() falhou após 5 tentativas: {e}")
+                                    raise
+                                logger.info(f"Browser não está pronto, aguardando... (tentativa {attempt+1}/5)")
+                                await asyncio.sleep(2)
                     else:
                         logger.info("Iniciando browser local (headless)...")
                         self._browser = await self._playwright.chromium.launch(headless=True)
