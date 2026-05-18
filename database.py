@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from contextlib import contextmanager
 
 # Fetch database connection string from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@db:5432/scraper")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@imobot_db:5432/scraper")
 
 # SQLAlchemy Setup
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)

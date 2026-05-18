@@ -9,19 +9,19 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - CHAT_ID=${CHAT_ID}
-      - BROWSER_WS_ENDPOINT=ws://browser:3000
+      - BROWSER_WS_ENDPOINT=ws://imobot_browser:3000
       - SCRAPE_INTERVAL=${SCRAPE_INTERVAL}
       - CONCURRENCY_LIMIT=${CONCURRENCY_LIMIT:-2}
     depends_on:
-      - db
-      - browser
+      - imobot_db
+      - imobot_browser
     networks:
       - backend
     dns:
       - 8.8.8.8
 
   # O Browser: Instância isolada
-  browser:
+  imobot_browser:
     image: ghcr.io/browserless/chromium:latest
     restart: unless-stopped
     environment:
@@ -35,7 +35,7 @@ services:
       - 8.8.8.8
 
   # A Base de Dados
-  db:
+  imobot_db:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
@@ -60,7 +60,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - PYTHONPATH=/app
     depends_on:
-      - db
+      - imobot_db
       - scraper
     networks:
       - backend
