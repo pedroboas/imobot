@@ -106,27 +106,30 @@ def send_telegram_message_sync(message):
         return
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": message,
-        "parse_mode": "HTML"
-    }
     
-    for attempt in range(3):
-        try:
-            response = requests.post(url, json=payload, timeout=10)
-            if response.status_code == 429:
-                retry_after = int(response.headers.get("Retry-After", 5))
-                logger.info(f"Telegram Rate Limit (429). Sleeping for {retry_after}s...")
-                time.sleep(retry_after)
-                continue
-                
-            response.raise_for_status()
-            time.sleep(1.0) 
-            return
-        except Exception as e:
-            logger.error(f"Failed to send Telegram message (attempt {attempt+1}): {e}")
-            time.sleep(2)
+    chat_ids = [cid.strip() for cid in CHAT_ID.split(',') if cid.strip()]
+    for cid in chat_ids:
+        payload = {
+            "chat_id": cid,
+            "text": message,
+            "parse_mode": "HTML"
+        }
+        
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json=payload, timeout=10)
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get("Retry-After", 5))
+                    logger.info(f"Telegram Rate Limit (429). Sleeping for {retry_after}s...")
+                    time.sleep(retry_after)
+                    continue
+                    
+                response.raise_for_status()
+                time.sleep(1.0) 
+                break
+            except Exception as e:
+                logger.error(f"Failed to send Telegram message to {cid} (attempt {attempt+1}): {e}")
+                time.sleep(2)
 
 async def send_telegram_message(message):
     return await asyncio.to_thread(send_telegram_message_sync, message)
@@ -288,6 +291,18 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             )
             
             page = await context.new_page()
+
+            # Network interception for sites with hidden APIs (like Remax)
+            api_data = {}
+            async def log_response(response):
+                if "PaginatedMultiMatchSearch" in response.url:
+                    try:
+                        text = await response.text()
+                        if "results" in text:
+                            api_data['json'] = text
+                    except:
+                        pass
+            page.on("response", log_response)
             
             attempt_str = f" (Tentativa {attempt+1}/{max_retries})" if attempt > 0 else ""
             logger.info(f"{counter_text}{attempt_str} Verificando: {search_url}")
@@ -329,6 +344,21 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             except:
                 pass
             await asyncio.sleep(1)
+
+            # Inject intercepted API data into DOM if available
+            if 'json' in api_data:
+                logger.info("Injecting intercepted API data into DOM...")
+                try:
+                    json_str = api_data['json']
+                    await page.evaluate("""(jsonStr) => {
+                        const script = document.createElement('script');
+                        script.id = '__REMAX_API_DATA__';
+                        script.type = 'application/json';
+                        script.textContent = jsonStr;
+                        document.body.appendChild(script);
+                    }""", json_str)
+                except Exception as e:
+                    logger.error(f"Failed to inject API data: {e}")
 
             content = await page.content()
             html_size = len(content)
