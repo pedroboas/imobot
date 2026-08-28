@@ -93,7 +93,7 @@ SITE_WAIT_SELECTORS = {
     "factorvalor.pt": ".propertyItem, .propertyItemWrap",
     "h-urb.com": ".propertyItem, .propertyItemWrap",
     "zome.pt": "a[href*='/imovel/'], .ListingPreviewItem, [class*='ListingPreview']",
-    "remax.pt": "a[href*='/imoveis/venda'], a[href*='/imovel/'], [class*='listing-card']",
+    "remax.pt": "a[data-id='listing-card-link'], div[data-id='listing-card-container'] a",
     "era.pt": "a[href*='/imovel/'], a.card__gallery",
     "barcelcasa.pt": ".propertyItem, .propertyItemWrap",
     "haconchego.pt": ".propertyItem, .propertyItemWrap",
@@ -292,14 +292,15 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             
             page = await context.new_page()
 
-            # Network interception for sites with hidden APIs (like Remax)
+            # Network interception for sites with hidden/dynamic APIs (like Remax)
             api_data = {}
             async def log_response(response):
-                if "PaginatedMultiMatchSearch" in response.url:
+                if "PaginatedMultiMatchSearch" in response.url or ("remax.pt" in response.url and "search" in response.url.lower()):
                     try:
                         text = await response.text()
                         if "results" in text:
                             api_data['json'] = text
+                            logger.info(f"Interceção de API bem-sucedida para {response.url[:60]}...")
                     except:
                         pass
             page.on("response", log_response)
@@ -307,8 +308,9 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             attempt_str = f" (Tentativa {attempt+1}/{max_retries})" if attempt > 0 else ""
             logger.info(f"{counter_text}{attempt_str} Verificando: {search_url}")
             
+            response_obj = None
             try:
-                await page.goto(search_url, wait_until="load", timeout=90000)
+                response_obj = await page.goto(search_url, wait_until="domcontentloaded", timeout=90000)
             except Exception as e:
                 if "Target page, context or browser has been closed" in str(e):
                     raise Exception("Browser disconnected during navigation")
@@ -345,6 +347,13 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
                 pass
             await asyncio.sleep(1)
 
+            # If remax.pt and API data not yet captured, give it a few extra moments
+            if "remax.pt" in search_url and 'json' not in api_data:
+                for _ in range(12):
+                    if 'json' in api_data:
+                        break
+                    await asyncio.sleep(0.5)
+
             # Inject intercepted API data into DOM if available
             if 'json' in api_data:
                 logger.info("Injecting intercepted API data into DOM...")
@@ -369,24 +378,46 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             logger.info(f"[{parser_name}] HTML Len: {html_size}")
 
             if parser_func:
-                found_properties = parser_func(content)
+                if parser_name == "parse_remax":
+                    found_properties = parser_func(content, api_data=api_data.get('json'))
+                else:
+                    found_properties = parser_func(content)
             else:
                 found_properties = parse_generic_logic(content, search_url)
 
             # Determine site name for logging
             site_domain = search_url.split('/')[2].replace('www.', '')
 
-            # Check for generic "blocked" signals if 0 results
+            # Check for genuine "blocked" signals if 0 results
             if len(found_properties) == 0:
-                if "captcha" in content.lower() or "acesso negado" in content.lower() or "access denied" in content.lower():
-                     logger.warning(f"BLOCKED: {search_url}")
-                     duration = int(time.time() - site_start)
-                     await asyncio.to_thread(
-                         save_scrape_log, run_id, search_url, site_domain,
-                         'blocked', 0, 0, 0, 'Blocked/Captcha', html_size,
-                         parser_name, duration, cookie_was_dismissed
-                     )
-                     return {"url": search_url, "status": "❌", "found": 0, "new": 0, "error": "Blocked/Captcha"}
+                is_blocked = False
+                block_reason = "Blocked"
+                
+                # Check HTTP response status if available
+                if response_obj and response_obj.status in [403, 429]:
+                    is_blocked = True
+                    block_reason = f"HTTP {response_obj.status} Blocked"
+                else:
+                    content_lower = content.lower()
+                    # Check for actual Cloudflare / DataDome challenge pages or explicit access denied title/heading
+                    if any(sig in content_lower for sig in [
+                        "datadome", "cf-browser-verification", "challenge-running",
+                        "just a moment...", "attention required! | cloudflare",
+                        "<title>access denied</title>", "<title>acesso negado</title>",
+                        "security check to access"
+                    ]):
+                        is_blocked = True
+                        block_reason = "Bot Protection / Challenge"
+                
+                if is_blocked:
+                    logger.warning(f"BLOCKED: {search_url} ({block_reason})")
+                    duration = int(time.time() - site_start)
+                    await asyncio.to_thread(
+                        save_scrape_log, run_id, search_url, site_domain,
+                        'blocked', 0, 0, 0, block_reason, html_size,
+                        parser_name, duration, cookie_was_dismissed
+                    )
+                    return {"url": search_url, "status": "❌", "found": 0, "new": 0, "error": block_reason}
 
             valid_properties = []
             for prop in found_properties:

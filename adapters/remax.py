@@ -3,167 +3,153 @@ import re
 import json
 import hashlib
 
-def parse_remax(html_content):
+def _extract_from_api_results(results):
+    properties = []
+    for item in results:
+        listing_id = str(item.get('listingTitle', '') or item.get('listingId', '') or item.get('id', ''))
+        tags = item.get('descriptionTags', '')
+        
+        if tags:
+            title = tags.replace('-', ' ').title()
+            title = re.sub(r'\bT(\d)', r'T\1', title)
+        else:
+            title = f"Imóvel RE/MAX {listing_id}"
+        
+        if tags and listing_id:
+            url = f"https://www.remax.pt/pt/imoveis/{tags}/{listing_id}"
+        elif tags:
+            url = f"https://www.remax.pt/pt/imoveis/{tags}"
+        else:
+            url = item.get('detailUrl', '') or item.get('url', '')
+            if url and not url.startswith('http'):
+                url = "https://www.remax.pt" + url
+
+        price_val = item.get('listingPrice') or item.get('price')
+        if price_val:
+            try:
+                price = f"{int(float(price_val)):,} €".replace(',', '.')
+            except (ValueError, TypeError):
+                price = str(price_val)
+        else:
+            price = "Preço sob Consulta"
+        
+        prop_id = listing_id or (hashlib.md5(url.encode()).hexdigest() if url else "")
+        if prop_id and url:
+            properties.append({
+                'id': prop_id,
+                'title': title,
+                'url': url,
+                'price': price,
+                'site': 'remax'
+            })
+    return properties
+
+def parse_remax(html_content, api_data=None):
     """
     Parser for Remax.pt listings.
-    Strategy:
-      1. Try '__NEXT_DATA__' JSON extraction (initialSearchResultsInfo.results)
-      2. Fallback to rendered DOM parsing (listing cards)
+    Strategy 0: Direct intercepted API data (dict or JSON string)
+    Strategy 1: Injected __REMAX_API_DATA__ in HTML
+    Strategy 2: __NEXT_DATA__ JSON extraction
+    Strategy 3: Rendered DOM parsing fallback
     """
-    soup = BeautifulSoup(html_content, 'html.parser')
     properties = []
     
-    # Strategy 1: Extract from __NEXT_DATA__ JSON (Next.js SSR/SSG)
+    # Strategy 0: Direct intercepted API data
+    if api_data:
+        try:
+            if isinstance(api_data, str):
+                parsed = json.loads(api_data)
+            elif isinstance(api_data, dict):
+                parsed = api_data
+            else:
+                parsed = {}
+            
+            results = parsed.get('results', [])
+            if results:
+                props = _extract_from_api_results(results)
+                if props:
+                    return props
+        except Exception as e:
+            print("Direct API parsing failed:", e)
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # Strategy 1: Extract from intercepted API data (injected into DOM)
+    api_script = soup.find('script', id='__REMAX_API_DATA__')
+    if api_script and api_script.string:
+        try:
+            data = json.loads(api_script.string)
+            results = data.get('results', [])
+            if results:
+                props = _extract_from_api_results(results)
+                if props:
+                    return props
+        except Exception as e:
+            print("API Strategy failed:", e)
+
+    # Strategy 2: Extract from __NEXT_DATA__ JSON (Next.js SSR/SSG)
     next_data = soup.find('script', id='__NEXT_DATA__')
-    if next_data:
+    if next_data and next_data.string:
         try:
             data = json.loads(next_data.string)
             page_props = data.get('props', {}).get('pageProps', {})
-            
-            # The results are nested in initialSearchResultsInfo.results
             search_info = page_props.get('initialSearchResultsInfo', {})
             results = search_info.get('results', [])
             
             if results:
-                for item in results:
-                    listing_id = str(item.get('listingId', ''))
-                    title_parts = []
-                    
-                    # Build title from available fields
-                    listing_type = item.get('listingTypeLabel', '')
-                    typology = item.get('typologyLabel', '')
-                    region = item.get('regionLabel', '')
-                    
-                    if listing_type:
-                        title_parts.append(listing_type)
-                    if typology:
-                        title_parts.append(typology)
-                    if region:
-                        title_parts.append(region)
-                    
-                    title = ' - '.join(title_parts) if title_parts else item.get('title', 'Remax Property')
-                    
-                    # URL construction
-                    url = item.get('detailUrl', '') or item.get('url', '')
-                    if url and not url.startswith('http'):
-                        url = "https://www.remax.pt" + url
-                    
-                    # Price - handle both numeric and string formats
-                    price_raw = item.get('price', item.get('priceLabel', 'N/A'))
-                    if isinstance(price_raw, (int, float)):
-                        price = f"{int(price_raw):,} €".replace(',', '.')
-                    else:
-                        price = str(price_raw)
-                    
-                    if listing_id or url:
-                        properties.append({
-                            'id': listing_id or hashlib.md5(url.encode()).hexdigest(),
-                            'title': title,
-                            'url': url,
-                            'price': price,
-                            'site': 'remax'
-                        })
-                
-                if properties:
-                    return properties
+                props = _extract_from_api_results(results)
+                if props:
+                    return props
         except Exception:
             pass
 
-    # Strategy 2: Parse rendered DOM (client-side rendered content)
-    # RE/MAX uses various card structures depending on version
-    listings = soup.find_all('div', attrs={'data-testid': re.compile(r'listing', re.I)})
+    # Strategy 3: Parse rendered DOM (client-side rendered content)
+    cards = soup.find_all('div', attrs={'data-id': re.compile(r'listing-card', re.I)})
+    if not cards:
+        cards = soup.find_all('a', href=re.compile(r'/(?:pt/)?imoveis/.*?\d+-\d+', re.I))
     
-    if not listings:
-        # Try broader selectors for rendered listing cards
-        listings = soup.find_all('div', class_=re.compile(r'listing-card|ListingCard|result-card|property-card', re.I))
-    
-    if not listings:
-        # Try finding links to property detail pages
-        property_links = soup.find_all('a', href=re.compile(r'/imoveis/venda[^"]*?/\d+-\d+', re.I))
-        for link in property_links:
-            try:
-                url = link['href']
-                if not url.startswith('http'):
-                    url = "https://www.remax.pt" + url
+    seen_ids = set()
+    for card in cards:
+        try:
+            link = card if card.name == 'a' else card.find('a', href=True)
+            if not link:
+                continue
+                
+            url = link.get('href', '')
+            if not url or 'comprar/imoveis' in url:
+                continue
+            if not url.startswith('http'):
+                url = "https://www.remax.pt" + url
 
-                # Extract ID from URL (e.g., 125681105-29)
-                id_match = re.search(r'/(\d+-\d+)$', url)
+            prop_id = link.get('itemid') or card.get('itemid')
+            if not prop_id:
+                id_match = re.search(r'/(\d+-\d+)(?:[/?#]|$)', url)
                 prop_id = id_match.group(1) if id_match else hashlib.md5(url.encode()).hexdigest()
 
-                # Avoid duplicates
-                if any(p['id'] == prop_id for p in properties):
-                    continue
+            if prop_id in seen_ids:
+                continue
+            seen_ids.add(prop_id)
 
-                # Extract title from URL slug (more reliable than DOM text)
-                # URL: /pt/imoveis/venda-apartamento-t3-barcelos-martim/125681105-29
-                slug_match = re.search(r'/imoveis/([\w-]+)/\d+-\d+$', url)
-                if slug_match:
-                    slug = slug_match.group(1)
-                    # Remove 'venda-' or 'comprar-' prefix
-                    slug = re.sub(r'^(venda|comprar)-', '', slug)
-                    # Convert hyphens to spaces, capitalize each word
-                    title = slug.replace('-', ' ').title()
-                    # Make it more readable: "Apartamento T3 Barcelos Martim"
-                    title = re.sub(r'\bT(\d)', r'T\1', title)  # Keep T2, T3 etc uppercase
-                else:
-                    title = link.get('title', 'Remax Property')
-                    if not title or len(title) < 5:
-                        title = 'Remax Property'
+            slug_match = re.search(r'/imoveis/([\w-]+)/\d+-\d+', url)
+            if slug_match:
+                slug = slug_match.group(1)
+                slug = re.sub(r'^(venda|comprar)-', '', slug)
+                title = slug.replace('-', ' ').title()
+                title = re.sub(r'\bT(\d)', r'T\1', title)
+            else:
+                title = link.get('title', 'Remax Property') or 'Remax Property'
 
-                # Extract price - walk up the DOM to find container with price
-                # Remax prices use spaces/non-breaking spaces: "240 000 €"
+            card_text = card.get_text(separator=" ", strip=True)
+            price_match = re.search(r'(\d+[\s.\u00a0]\d{3}(?:[\s.\u00a0]\d+)?)\s*€', card_text)
+            if price_match:
+                price = price_match.group(0).strip()
+            elif 'consulta' in card_text.lower():
+                price = "Preço sob Consulta"
+            else:
                 price = "N/A"
-                parent = link.parent
-                for _ in range(6):  # Walk up max 6 levels
-                    if parent is None:
-                        break
-                    parent_text = parent.get_text()
-                    # Match prices like "240 000 €" or "207.000 €" or "240,000 €"
-                    price_match = re.search(r'([\d]+[\s.\u00a0]?[\d]{3}[\s.\u00a0]?[\d]*)\s*€', parent_text)
-                    if price_match:
-                        price = price_match.group(0).strip()
-                        break
-                    # Also try "Preço sob Consulta"
-                    if 'consulta' in parent_text.lower():
-                        price = "Preço sob Consulta"
-                        break
-                    parent = parent.parent
-
-                properties.append({
-                    'id': prop_id,
-                    'title': title,
-                    'url': url,
-                    'price': price,
-                    'site': 'remax'
-                })
-            except Exception:
-                continue
-
-    # Strategy 2b: Parse standard card structure
-    for item in listings:
-        try:
-            link_tag = item.find('a', href=True)
-            if not link_tag:
-                continue
-            
-            url = link_tag['href']
-            if url and not url.startswith('http'):
-                url = "https://www.remax.pt" + url
-            
-            title_tag = item.find(['h2', 'h3', 'h4'])
-            title = title_tag.get_text(strip=True) if title_tag else "Remax Property"
-            
-            price_tag = item.find(string=re.compile(r'[\d.,]+\s*€', re.I))
-            price = price_tag.parent.get_text(strip=True) if price_tag and price_tag.parent else "N/A"
-            
-            prop_id = re.search(r'/(\d+-\d+)', url)
-            prop_id = prop_id.group(1) if prop_id else hashlib.md5(url.encode()).hexdigest()
-
-            if any(p['id'] == prop_id for p in properties):
-                continue
 
             properties.append({
-                'id': prop_id,
+                'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,
@@ -173,3 +159,4 @@ def parse_remax(html_content):
             continue
             
     return properties
+
