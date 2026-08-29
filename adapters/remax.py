@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import re
 import json
 import hashlib
+from adapters.utils import extract_image, extract_image_from_dict
 
 def _extract_from_api_results(results):
     properties = []
@@ -34,13 +35,18 @@ def _extract_from_api_results(results):
             price = "Preço sob Consulta"
         
         prop_id = listing_id or (hashlib.md5(url.encode()).hexdigest() if url else "")
+        
+        # Image
+        image_url = extract_image_from_dict(item)
+
         if prop_id and url:
             properties.append({
                 'id': prop_id,
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'remax'
+                'site': 'remax',
+                'image_url': image_url
             })
     return properties
 
@@ -148,12 +154,16 @@ def parse_remax(html_content, api_data=None):
             else:
                 price = "N/A"
 
+            # Image
+            image_url = extract_image(card, "https://www.remax.pt")
+
             properties.append({
                 'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'remax'
+                'site': 'remax',
+                'image_url': image_url
             })
         except Exception:
             continue

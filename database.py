@@ -32,6 +32,7 @@ class Property(Base):
     title = Column(String)
     url = Column(String)
     price = Column(String)
+    image_url = Column(String, nullable=True)
     found_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -86,6 +87,18 @@ def init_db():
     Creates the database tables if they do not exist.
     """
     Base.metadata.create_all(bind=engine)
+    # Check if image_url column exists in properties table, if not add it
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE properties ADD COLUMN IF NOT EXISTS image_url VARCHAR;"))
+            conn.commit()
+        except Exception:
+            try:
+                conn.execute(text("ALTER TABLE properties ADD COLUMN image_url VARCHAR;"))
+                conn.commit()
+            except Exception:
+                pass
 
 
 @contextmanager
@@ -109,13 +122,13 @@ def is_property_new(prop_id):
         return session.query(Property).filter(Property.id == prop_id).first() is None
 
 
-def save_property(prop_id, site, title, url, price):
+def save_property(prop_id, site, title, url, price, image_url=None):
     """
     Persists a new property listing to the database.
     """
     with get_session() as session:
         try:
-            new_prop = Property(id=prop_id, site=site, title=title, url=url, price=price)
+            new_prop = Property(id=prop_id, site=site, title=title, url=url, price=price, image_url=image_url)
             session.add(new_prop)
             session.commit()
         except Exception as e:

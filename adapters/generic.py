@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import re
 import urllib.parse
 import hashlib
+from adapters.utils import extract_image
 
 BLACKLIST_KEYWORDS = [
     'facebook.com', 'whatsapp.com', 'twitter.com', 'pinterest.com', 
@@ -101,13 +102,17 @@ def parse_generic_logic(html_content, base_url):
                 path = urllib.parse.urlparse(url).path
                 prop_id = f"gen_{hashlib.md5(path.encode()).hexdigest()}"
 
+            # Image
+            image_url = extract_image(item, base_url)
+
             if url and prop_id:
                 properties.append({
                     'id': prop_id,
                     'title': title,
                     'url': url,
                     'price': price,
-                    'site': urllib.parse.urlparse(base_url).netloc
+                    'site': urllib.parse.urlparse(base_url).netloc,
+                    'image_url': image_url
                 })
         except Exception:
             continue

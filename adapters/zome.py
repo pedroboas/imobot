@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import re
 import json
 import hashlib
+from adapters.utils import extract_image, extract_image_from_dict
 
 def parse_zome(html_content):
     """
@@ -61,12 +62,14 @@ def parse_zome(html_content):
             
             if prop_id not in seen_ids:
                 seen_ids.add(prop_id)
+                image_url = extract_image(item, "https://www.zome.pt")
                 properties.append({
                     'id': prop_id,
                     'title': title,
                     'url': url,
                     'price': price,
-                    'site': 'zome'
+                    'site': 'zome',
+                    'image_url': image_url
                 })
         except Exception:
             continue
@@ -112,12 +115,14 @@ def parse_zome(html_content):
                 if price_el:
                     price = price_el.strip()
             
+            image_url = extract_image(container if container else link, "https://www.zome.pt")
             properties.append({
                 'id': prop_id,
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'zome'
+                'site': 'zome',
+                'image_url': image_url
             })
         except Exception:
             continue
@@ -160,12 +165,14 @@ def _extract_from_json(data, properties, seen_ids, depth=0):
             
             if prop_id and prop_id not in seen_ids:
                 seen_ids.add(prop_id)
+                image_url = extract_image_from_dict(data)
                 properties.append({
                     'id': prop_id,
                     'title': str(title)[:100],
                     'url': url,
                     'price': str(price),
-                    'site': 'zome'
+                    'site': 'zome',
+                    'image_url': image_url
                 })
             return
         

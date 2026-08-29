@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 from urllib.parse import urlparse, parse_qs
+from adapters.utils import extract_image
 
 def parse_decisoesesolucoes(html_content):
     """
@@ -53,12 +54,16 @@ def parse_decisoesesolucoes(html_content):
             price_tag = card.find(class_='price')
             price = price_tag.get_text(strip=True) if price_tag else "N/A"
 
+            # Image
+            image_url = extract_image(card, "https://www.decisoesesolucoes.com")
+
             properties.append({
                 'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'decisoesesolucoes'
+                'site': 'decisoesesolucoes',
+                'image_url': image_url
             })
             
         except Exception as e:

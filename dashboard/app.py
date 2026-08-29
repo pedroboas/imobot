@@ -50,6 +50,7 @@ async def get_recent_properties():
                 "title": p.title,
                 "url": p.url,
                 "price": p.price,
+                "image_url": p.image_url,
                 "found_at": p.found_at.isoformat()
             } for p in props
         ]

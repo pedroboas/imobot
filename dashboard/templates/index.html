@@ -183,14 +183,17 @@
 
                     container.innerHTML += `
                         <a href="${p.url}" target="_blank" class="prop-card">
-                            <div class="prop-info">
-                                <span class="prop-site">${p.site}</span>
-                                <span class="prop-title" title="${p.title}">${p.title}</span>
-                            </div>
-                            <div class="prop-footer">
-                                <span class="prop-price">${formattedPrice}</span>
-                                <div class="prop-link-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                            ${p.image_url ? `<img class="prop-image" src="${p.image_url}" alt="${p.title}" onerror="this.style.display='none'; this.nextElementSibling.classList.add('no-image');">` : '<div class="prop-image-placeholder"></div>'}
+                            <div class="prop-card-content">
+                                <div class="prop-info">
+                                    <span class="prop-site">${p.site}</span>
+                                    <span class="prop-title" title="${p.title}">${p.title}</span>
+                                </div>
+                                <div class="prop-footer">
+                                    <span class="prop-price">${formattedPrice}</span>
+                                    <div class="prop-link-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                                    </div>
                                 </div>
                             </div>
                         </a>

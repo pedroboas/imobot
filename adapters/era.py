@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 import hashlib
+from adapters.utils import extract_image
 
 def parse_era(html_content):
     """
@@ -94,12 +95,16 @@ def parse_era(html_content):
             if 'agencia' in url.lower() or '/comprar' == url.rstrip('/').lower():
                 continue
             
+            # Image
+            image_url = extract_image(card, "https://www.era.pt")
+
             properties.append({
                 'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'era'
+                'site': 'era',
+                'image_url': image_url
             })
         except Exception:
             continue
@@ -130,12 +135,15 @@ def parse_era(html_content):
                 
                 if prop_id not in seen_ids:
                     seen_ids.add(prop_id)
+                    # Image
+                    image_url = extract_image(item, "https://www.era.pt")
                     properties.append({
                         'id': str(prop_id),
                         'title': title,
                         'url': url,
                         'price': price,
-                        'site': 'era'
+                        'site': 'era',
+                        'image_url': image_url
                     })
             except Exception:
                 continue

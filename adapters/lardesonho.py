@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 import hashlib
+from adapters.utils import extract_image
 
 def parse_lardesonho(html_content):
     """
@@ -63,12 +64,16 @@ def parse_lardesonho(html_content):
                     break
                 container = container.parent
             
+            # Image
+            image_url = extract_image(container if container else link.parent, "https://www.lardesonho.pt")
+
             properties.append({
                 'id': prop_id,
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'lardesonho'
+                'site': 'lardesonho',
+                'image_url': image_url
             })
         except Exception:
             continue
@@ -99,12 +104,16 @@ def parse_lardesonho(html_content):
                 price_tag = card.find(class_=re.compile(r'price|overlay-price', re.I))
                 price = price_tag.get_text(strip=True) if price_tag else "N/A"
                 
+                # Image
+                image_url = extract_image(card, "https://www.lardesonho.pt")
+
                 properties.append({
                     'id': prop_id,
                     'title': title,
                     'url': url,
                     'price': price,
-                    'site': 'lardesonho'
+                    'site': 'lardesonho',
+                    'image_url': image_url
                 })
             except Exception:
                 continue

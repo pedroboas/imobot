@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 import hashlib
+from adapters.utils import extract_image
 
 def parse_casasapo(html_content):
     """
@@ -35,12 +36,16 @@ def parse_casasapo(html_content):
             if not prop_id and url:
                 prop_id = hashlib.md5(url.encode()).hexdigest()
 
+            # Image
+            image_url = extract_image(item, "https://casa.sapo.pt")
+
             properties.append({
                 'id': prop_id,
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'casasapo'
+                'site': 'casasapo',
+                'image_url': image_url
             })
         except Exception as e:
             print(f"Erro ao processar um item do Casa SAPO: {e}")

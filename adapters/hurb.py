@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 import hashlib
+from adapters.utils import extract_image
 
 def parse_hurb(html_content):
     """
@@ -44,12 +45,16 @@ def parse_hurb(html_content):
                 id_match = re.search(r'/(\d+)$', url.split('?')[0])
                 prop_id = id_match.group(1) if id_match else hashlib.md5(url.encode()).hexdigest()
 
+            # Image
+            image_url = extract_image(item, "https://www.h-urb.com")
+
             properties.append({
                 'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'h-urb'
+                'site': 'h-urb',
+                'image_url': image_url
             })
         except Exception:
             continue

@@ -100,20 +100,28 @@ SITE_WAIT_SELECTORS = {
     "lardesonho.pt": "a[href*='/imovel/'], .destaque-box-wrapper, .overlay-price-wrapper",
 }
 
-def send_telegram_message_sync(message):
+def send_telegram_message_sync(message, image_url=None):
     if not TELEGRAM_TOKEN or not CHAT_ID:
         logger.warning("Telegram credentials missing, skipping notification.")
         return
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    
     chat_ids = [cid.strip() for cid in CHAT_ID.split(',') if cid.strip()]
     for cid in chat_ids:
-        payload = {
-            "chat_id": cid,
-            "text": message,
-            "parse_mode": "HTML"
-        }
+        if image_url:
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
+            payload = {
+                "chat_id": cid,
+                "photo": image_url,
+                "caption": message,
+                "parse_mode": "HTML"
+            }
+        else:
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+            payload = {
+                "chat_id": cid,
+                "text": message,
+                "parse_mode": "HTML"
+            }
         
         for attempt in range(3):
             try:
@@ -124,15 +132,36 @@ def send_telegram_message_sync(message):
                     time.sleep(retry_after)
                     continue
                     
+                if response.status_code != 200 and image_url:
+                    logger.warning(f"sendPhoto failed (status {response.status_code}). Falling back to sendMessage.")
+                    fallback_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+                    fallback_payload = {
+                        "chat_id": cid,
+                        "text": message,
+                        "parse_mode": "HTML"
+                    }
+                    response = requests.post(fallback_url, json=fallback_payload, timeout=10)
+                
                 response.raise_for_status()
                 time.sleep(1.0) 
                 break
             except Exception as e:
-                logger.error(f"Failed to send Telegram message to {cid} (attempt {attempt+1}): {e}")
+                logger.error(f"Failed to send Telegram notification to {cid} (attempt {attempt+1}): {e}")
+                if image_url and attempt == 2:
+                    try:
+                        fallback_url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+                        fallback_payload = {
+                            "chat_id": cid,
+                            "text": message,
+                            "parse_mode": "HTML"
+                        }
+                        requests.post(fallback_url, json=fallback_payload, timeout=10)
+                    except:
+                        pass
                 time.sleep(2)
 
-async def send_telegram_message(message):
-    return await asyncio.to_thread(send_telegram_message_sync, message)
+async def send_telegram_message(message, image_url=None):
+    return await asyncio.to_thread(send_telegram_message_sync, message, image_url)
 
 async def wait_for_db():
     logger.info("Aguardando base de dados ficar pronta...")
@@ -442,18 +471,37 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
                     is_new = await asyncio.to_thread(is_property_new, prop['id'])
                     if is_new:
                         logger.info(f"NOVA PROPRIEDADE: {prop['title']} - {prop['price']}")
+                        img_url = prop.get('image_url')
                         await asyncio.to_thread(
-                            save_property, prop['id'], prop['site'], prop['title'], prop['url'], prop['price']
+                            save_property, prop['id'], prop['site'], prop['title'], prop['url'], prop['price'], img_url
                         )
                         
-                        msg = (
-                            "🏠 <b>Nova Casa Encontrada!</b>\n\n"
-                            f"<b>Título:</b> {html.escape(prop['title'])}\n"
-                            f"<b>Preço:</b> {html.escape(prop['price'])}\n"
-                            f"<b>Site:</b> {prop['site']}\n\n"
-                            f"<a href='{html.escape(prop['url'])}'>Ver no site</a>"
-                        )
-                        await send_telegram_message(msg)
+                        # Extrair tipologia
+                        typology = None
+                        t_match = re.search(r'\b(T\d+)\b', prop['title'], re.I)
+                        if t_match:
+                            typology = t_match.group(1).upper()
+
+                        site_name = prop['site'].capitalize()
+                        
+                        msg_lines = [
+                            "🔔 <b>NOVA DESCOBERTA!</b>",
+                            "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯",
+                            f"🏠 <b>{html.escape(prop['title'])}</b>",
+                        ]
+                        
+                        if typology:
+                            msg_lines.append(f"🛏️ <b>Tipologia:</b> {typology}")
+                            
+                        msg_lines.extend([
+                            f"💰 <b>Preço:</b> <code>{html.escape(prop['price'])}</code>",
+                            f"🌐 <b>Portal:</b> {site_name}",
+                            "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯",
+                            f"🔗 <a href='{html.escape(prop['url'])}'>Ver Anúncio Original</a>"
+                        ])
+                        
+                        msg = "\n".join(msg_lines)
+                        await send_telegram_message(msg, img_url)
                         new_count_site += 1
                 except Exception as e_db:
                     logger.error(f"Erro DB/Telegram: {e_db}")

@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import re
 import hashlib
+from adapters.utils import extract_image
 
 def parse_imovirtual(html_content):
     """
@@ -46,12 +47,16 @@ def parse_imovirtual(html_content):
             else:
                 prop_id = item.get('id') or item.get('data-item-id') or hashlib.md5(url.encode()).hexdigest()
 
+            # Image
+            image_url = extract_image(item, "https://www.imovirtual.com")
+
             properties.append({
                 'id': prop_id,
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'imovirtual'
+                'site': 'imovirtual',
+                'image_url': image_url
             })
         except Exception as e:
             print(f"Erro ao processar um item de Imovirtual: {e}")

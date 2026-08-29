@@ -399,13 +399,48 @@ h2 {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--glass-border);
     border-radius: 16px;
-    padding: 1.5rem;
+    padding: 0;
     text-decoration: none;
     color: inherit;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
 }
+
+.prop-image {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border-bottom: 1px solid var(--glass-border);
+    background-color: rgba(255, 255, 255, 0.01);
+    transition: transform 0.5s ease;
+    display: block;
+}
+
+.prop-card:hover .prop-image {
+    transform: scale(1.03);
+}
+
+.prop-image-placeholder {
+    width: 100%;
+    height: 160px;
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.2) 0%, rgba(15, 118, 110, 0.15) 100%);
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.prop-card-content {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+    z-index: 2;
+}
+
 
 .prop-card::after {
     content: '';
