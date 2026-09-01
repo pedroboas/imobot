@@ -482,31 +482,15 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
                             save_property, prop['id'], prop['site'], prop['title'], prop['url'], prop['price'], img_url
                         )
                         
-                        # Extrair tipologia
-                        typology = None
-                        t_match = re.search(r'\b(T\d+)\b', prop['title'], re.I)
-                        if t_match:
-                            typology = t_match.group(1).upper()
-
                         site_name = prop['site'].capitalize()
                         
-                        msg_lines = [
-                            "🔔 <b>NOVA DESCOBERTA!</b>",
-                            "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯",
-                            f"🏠 <b>{html.escape(prop['title'])}</b>",
-                        ]
-                        
-                        if typology:
-                            msg_lines.append(f"🛏️ <b>Tipologia:</b> {typology}")
-                            
-                        msg_lines.extend([
-                            f"💰 <b>Preço:</b> <code>{html.escape(prop['price'])}</code>",
-                            f"🌐 <b>Portal:</b> {site_name}",
-                            "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯",
-                            f"🔗 <a href='{html.escape(prop['url'])}'>Ver Anúncio Original</a>"
-                        ])
-                        
-                        msg = "\n".join(msg_lines)
+                        msg = (
+                            f"🏠 <b>Nova Casa Encontrada!</b>\n\n"
+                            f"<b>Título:</b> {html.escape(prop['title'])}\n"
+                            f"<b>Preço:</b> {html.escape(prop['price'])}\n"
+                            f"<b>Site:</b> {html.escape(site_name)}\n\n"
+                            f"<a href='{html.escape(prop['url'])}'>Ver no site</a>"
+                        )
                         await send_telegram_message(msg, img_url)
                         new_count_site += 1
                 except Exception as e_db:
