@@ -39,6 +39,8 @@ from adapters.factorvalor import parse_factorvalor
 from adapters.decisoesesolucoes import parse_decisoesesolucoes
 from adapters.hurb import parse_hurb
 from adapters.lardesonho import parse_lardesonho
+from adapters.grupomerito import parse_grupomerito
+from adapters.iadportugal import parse_iadportugal
 from adapters.generic import parse_generic_logic
 
 # Load environment variables
@@ -84,6 +86,8 @@ PARSERS = {
     "decisoesesolucoes.com": parse_decisoesesolucoes,
     "h-urb.com": parse_hurb,
     "lardesonho.pt": parse_lardesonho,
+    "grupomerito.pt": parse_grupomerito,
+    "iadportugal.pt": parse_iadportugal,
 }
 
 # Site-specific CSS selectors to wait for before extracting content.
@@ -98,6 +102,8 @@ SITE_WAIT_SELECTORS = {
     "barcelcasa.pt": ".propertyItem, .propertyItemWrap",
     "haconchego.pt": ".propertyItem, .propertyItemWrap",
     "lardesonho.pt": "a[href*='/imovel/'], .destaque-box-wrapper, .overlay-price-wrapper",
+    "grupomerito.pt": ".item, a[href*='/Imovel/']",
+    "iadportugal.pt": "a[href*='/anuncio/']",
 }
 
 def send_telegram_message_sync(message, image_url=None):
