@@ -8,59 +8,50 @@ def parse_iadportugal(html_content):
     """
     soup = BeautifulSoup(html_content, 'html.parser')
     properties = []
-    
-    # Target property listing links
-    links = soup.find_all('a', href=re.compile(r'/anuncio/.*?/(r\d+)', re.I))
+    articles = soup.find_all('article')
     
     seen_ids = set()
-    for link in links:
+    for article in articles:
         try:
-            url = link.get('href', '')
-            if not url:
+            link = article.find('a', href=re.compile(r'/anuncio/.*?/(r\d+)', re.I))
+            if not link:
                 continue
                 
-            match = re.search(r'/(r\d+)(?:[/?#]|$)', url)
-            prop_id = match.group(1) if match else hashlib.md5(url.encode()).hexdigest()
-            
-            if prop_id in seen_ids:
-                continue
-            seen_ids.add(prop_id)
-            
+            url = link.get('href', '')
+            if not url: continue
             if not url.startswith('http'):
                 url = "https://www.iadportugal.pt" + url
 
-            # Find parent card for price and title
-            card = link
-            for _ in range(6):
-                if not card: break
-                card_text = card.get_text(" | ", strip=True)
-                if "€" in card_text:
-                    break
-                card = card.parent
-
-            card_text = card.get_text(" | ", strip=True) if card else ""
-            price_match = re.search(r'(\d+[\s.\u00a0]?\d{3})\s*€', card_text)
-            if price_match:
-                price = price_match.group(0).strip()
-            else:
-                price = "Preço N/A"
+            match = re.search(r'/(r\d+)(?:[/?#]|$)', url)
+            prop_id = match.group(1) if match else hashlib.md5(url.encode()).hexdigest()
+            
+            if prop_id in seen_ids: continue
+            seen_ids.add(prop_id)
 
             # Title
-            title = link.get('title') or ""
-            if not title:
-                slug_match = re.search(r'/anuncio/([^/]+)/', url)
-                if slug_match:
-                    slug = slug_match.group(1)
-                    title = slug.replace('-', ' ').title()
-                else:
-                    title = "Imóvel iad Portugal"
+            h2 = article.find('h2')
+            if h2:
+                title = h2.get_text(" ", strip=True)
+            else:
+                title = link.get('title') or "Imóvel iad Portugal"
+
+            # Price
+            price_match = re.search(r'(\d+[\s.\u00a0]?\d{3})\s*€', article.get_text())
+            price = price_match.group(0).strip() if price_match else "Preço N/A"
+
+            # Image
+            img = article.find('img')
+            image_url = img.get('src') if img else None
+            if image_url and 'width=300' in image_url:
+                image_url = image_url.replace('width=300', 'width=800')
 
             properties.append({
                 'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,
-                'site': 'iadportugal'
+                'site': 'iadportugal',
+                'image_url': image_url
             })
         except Exception:
             continue
