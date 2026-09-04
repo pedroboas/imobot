@@ -1,50 +1,67 @@
 from bs4 import BeautifulSoup
 import re
 import hashlib
-from adapters.utils import extract_image
 
 def parse_custojusto(html_content):
     """
     Parser for CustoJusto.pt listings.
-    Targets listing-item patterns and extracts IDs directly from URL structures when possible.
     """
     soup = BeautifulSoup(html_content, 'html.parser')
     properties = []
     
-    # CustoJusto listings are likely 'a' tags with specific classes
-    listings = soup.find_all('a', class_=re.compile(r'itemCard_link'))
+    # Target all property links with ID at end
+    links = soup.find_all('a', href=re.compile(r'/braga/imobiliario/.*?-\d{6,}', re.I))
+    seen_ids = set()
     
-    for item in listings:
+    for link in links:
         try:
-            # Extract ID from id attribute
-            prop_id = item.get('id')
-            
-            # URL and Title
-            url = item.get('href', "")
-            if url and not url.startswith('http'):
+            url = link.get('href', '')
+            if not url:
+                continue
+            if not url.startswith('http'):
                 url = "https://www.custojusto.pt" + url
-                
-            title = item.get('title') or "Sem título"
+
+            id_match = re.search(r'-(\d{6,})(?:[/?#]|$)', url)
+            prop_id = id_match.group(1) if id_match else url
             
-            # Price
-            price_tag = item.find('h5')
-            price = price_tag.get_text(strip=True) if price_tag else "Preço não disponível"
+            if prop_id in seen_ids:
+                continue
+            seen_ids.add(prop_id)
 
-            if not prop_id and url:
-                prop_id = hashlib.md5(url.encode()).hexdigest()
+            # Title
+            h2 = link.find(['h2', 'h3'])
+            title = h2.get_text(strip=True) if h2 else (link.get('title') or "Imóvel CustoJusto")
 
-            # Image
-            image_url = extract_image(item, "https://www.custojusto.pt")
+            # Climb parent hierarchy for Price and Image
+            price = "Preço N/A"
+            image_url = None
+            parent = link
+            for _ in range(8):
+                if not parent:
+                    break
+                parent_text = parent.get_text(" ", strip=True)
+                if "€" in parent_text and price == "Preço N/A":
+                    price_match = re.search(r'(\d+[\s.\u00a0]?\d{3})\s*€', parent_text)
+                    if price_match:
+                        price = price_match.group(0).strip()
+                
+                if not image_url:
+                    img = parent.find('img')
+                    if img:
+                        src = img.get('src') or img.get('data-src') or img.get('data-original')
+                        if src and 'data:image' not in src:
+                            image_url = src
+                parent = parent.parent
 
             properties.append({
-                'id': prop_id,
+                'id': str(prop_id),
                 'title': title,
                 'url': url,
                 'price': price,
                 'site': 'custojusto',
                 'image_url': image_url
             })
-        except Exception as e:
-            print(f"Erro ao processar um item do CustoJusto: {e}")
+        except Exception:
+            continue
             
     return properties

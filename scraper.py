@@ -41,6 +41,7 @@ from adapters.hurb import parse_hurb
 from adapters.lardesonho import parse_lardesonho
 from adapters.grupomerito import parse_grupomerito
 from adapters.iadportugal import parse_iadportugal
+from adapters.century21 import parse_century21
 from adapters.generic import parse_generic_logic
 
 # Load environment variables
@@ -88,6 +89,7 @@ PARSERS = {
     "lardesonho.pt": parse_lardesonho,
     "grupomerito.pt": parse_grupomerito,
     "iadportugal.pt": parse_iadportugal,
+    "century21.pt": parse_century21,
 }
 
 # Site-specific CSS selectors to wait for before extracting content.
@@ -104,6 +106,8 @@ SITE_WAIT_SELECTORS = {
     "lardesonho.pt": "a[href*='/imovel/'], .destaque-box-wrapper, .overlay-price-wrapper",
     "grupomerito.pt": ".item, a[href*='/Imovel/']",
     "iadportugal.pt": "a[href*='/anuncio/']",
+    "century21.pt": "a[href*='/comprar/C'], [class*='property']",
+    "custojusto.pt": "a[href*='/braga/imobiliario/']",
 }
 
 def send_telegram_message_sync(message, image_url=None):
@@ -327,13 +331,13 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             
             page = await context.new_page()
 
-            # Network interception for sites with hidden/dynamic APIs (like Remax)
+            # Network interception for sites with hidden/dynamic APIs (like Remax, Century 21)
             api_data = {}
             async def log_response(response):
-                if "PaginatedMultiMatchSearch" in response.url or ("remax.pt" in response.url and "search" in response.url.lower()):
+                if "PaginatedMultiMatchSearch" in response.url or ("remax.pt" in response.url and "search" in response.url.lower()) or "century21.pt/api/properties" in response.url:
                     try:
                         text = await response.text()
-                        if "results" in text:
+                        if "results" in text or "properties" in text:
                             api_data['json'] = text
                             logger.info(f"Interceção de API bem-sucedida para {response.url[:60]}...")
                     except:
@@ -413,7 +417,7 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             logger.info(f"[{parser_name}] HTML Len: {html_size}")
 
             if parser_func:
-                if parser_name == "parse_remax":
+                if parser_name in ["parse_remax", "parse_century21"]:
                     found_properties = parser_func(content, api_data=api_data.get('json'))
                 else:
                     found_properties = parser_func(content)
