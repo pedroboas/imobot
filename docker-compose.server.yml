@@ -58,6 +58,9 @@ services:
       - .:/app
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - SESSION_SECRET=${SESSION_SECRET:-imobot_secure_session_token}
       - PYTHONPATH=/app
     depends_on:
       - imobot_db

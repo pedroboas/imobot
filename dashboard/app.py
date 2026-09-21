@@ -1,28 +1,99 @@
 import os
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, desc, func
-from sqlalchemy.orm import sessionmaker
-from database import Base, Property, PriceHistory, ScrapeLog, RunSummary, get_session
 import json
 import secrets
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from typing import Optional
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Response, Depends, HTTPException, status, Query
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from sqlalchemy import create_engine, desc, asc, func
+from sqlalchemy.orm import sessionmaker
+from database import Base, Property, PriceHistory, ScrapeLog, RunSummary, get_session
+from analytics.backfill import run_backfill
 
-app = FastAPI()
+app = FastAPI(title="ImoBot Real Estate Intelligence")
 
 # Setup paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
-LOG_FILE = "/app/scraper.log"
+LOG_FILE = os.getenv("LOG_FILE", "/app/scraper.log" if os.path.exists("/app") else "scraper.log")
+TRIGGER_FILE = os.getenv("TRIGGER_FILE", "/app/trigger.flag" if os.path.exists("/app") else "trigger.flag")
+
+# Authentication credentials
+ADMIN_USER = os.getenv("ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+AUTH_SECRET_TOKEN = os.getenv("SESSION_SECRET", secrets.token_hex(24))
+
+def check_auth(request: Request) -> bool:
+    """
+    Validates if request is authenticated as Admin via cookie or Authorization header.
+    """
+    token = request.cookies.get("imobot_session")
+    if token and token == AUTH_SECRET_TOKEN:
+        return True
+        
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Basic "):
+        import base64
+        try:
+            decoded = base64.b64decode(auth_header[6:]).decode("utf-8")
+            u, p = decoded.split(":", 1)
+            if u == ADMIN_USER and p == ADMIN_PASSWORD:
+                return True
+        except Exception:
+            pass
+    return False
+
+def require_admin(request: Request):
+    """
+    FastAPI dependency that enforces admin authentication.
+    """
+    if not check_auth(request):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Autenticação de Administrador necessária para esta operação."
+        )
+    return True
+
+# --- PUBLIC ENDPOINTS ---
 
 @app.get("/")
 async def get_dashboard(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
+
+@app.get("/api/auth/status")
+async def get_auth_status(request: Request):
+    is_auth = check_auth(request)
+    return {"authenticated": is_auth, "user": ADMIN_USER if is_auth else None}
+
+@app.post("/api/auth/login")
+async def login(request: Request, response: Response):
+    try:
+        body = await request.json()
+        username = body.get("username", "").strip()
+        password = body.get("password", "").strip()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Formato JSON inválido")
+
+    if username == ADMIN_USER and password == ADMIN_PASSWORD:
+        response.set_cookie(
+            key="imobot_session",
+            value=AUTH_SECRET_TOKEN,
+            httponly=True,
+            samesite="lax",
+            max_age=86400 * 7 # 7 days
+        )
+        return {"success": True, "message": "Autenticado com sucesso como Administrador"}
+    
+    raise HTTPException(status_code=401, detail="Utilizador ou palavra-passe incorretos")
+
+@app.post("/api/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="imobot_session")
+    return {"success": True, "message": "Sessão terminada"}
 
 @app.get("/api/stats")
 async def get_stats():
@@ -40,9 +111,49 @@ async def get_stats():
         }
 
 @app.get("/api/properties")
-async def get_recent_properties():
+async def get_properties(
+    q: Optional[str] = None,
+    typology: Optional[str] = None,
+    parish: Optional[str] = None,
+    min_price: Optional[int] = None,
+    max_price: Optional[int] = None,
+    sort: str = "newest",
+    limit: int = Query(default=30, le=150)
+):
+    """
+    Search and filter properties with sorting and pagination.
+    """
     with get_session() as session:
-        props = session.query(Property).order_by(desc(Property.found_at)).limit(12).all()
+        query = session.query(Property).filter(Property.is_active == True)
+
+        if q:
+            term = f"%{q.strip()}%"
+            query = query.filter((Property.title.ilike(term)) | (Property.parish.ilike(term)) | (Property.site.ilike(term)))
+
+        if typology and typology != "Todos":
+            query = query.filter(Property.typology == typology)
+
+        if parish and parish != "Todas":
+            query = query.filter(Property.parish == parish)
+
+        if min_price:
+            query = query.filter(Property.numeric_price >= min_price)
+
+        if max_price:
+            query = query.filter(Property.numeric_price <= max_price)
+
+        # Sorting
+        if sort == "price_asc":
+            query = query.order_by(asc(Property.numeric_price))
+        elif sort == "price_desc":
+            query = query.order_by(desc(Property.numeric_price))
+        elif sort == "score_desc":
+            query = query.order_by(desc(Property.opportunity_score), desc(Property.found_at))
+        else: # newest
+            query = query.order_by(desc(Property.found_at))
+
+        props = query.limit(limit).all()
+
         return [
             {
                 "id": p.id,
@@ -80,7 +191,6 @@ async def get_analytics_overview():
         total_drops = session.query(PriceHistory).count()
         total_deals = session.query(Property).filter(Property.opportunity_score >= 78).count()
         
-        # Calculate median price using sorted list or percentile
         prices = [r[0] for r in session.query(Property.numeric_price).filter(Property.numeric_price > 0).order_by(Property.numeric_price).all()]
         median_price = prices[len(prices)//2] if prices else 0
 
@@ -147,7 +257,7 @@ async def get_top_deals():
         deals = session.query(Property).filter(
             Property.opportunity_score >= 70,
             Property.numeric_price > 0
-        ).order_by(desc(Property.opportunity_score), desc(Property.found_at)).limit(10).all()
+        ).order_by(desc(Property.opportunity_score), desc(Property.found_at)).limit(12).all()
 
         return [
             {
@@ -172,7 +282,7 @@ async def get_price_drops():
             PriceHistory, Property
         ).outerjoin(
             Property, PriceHistory.property_id == Property.id
-        ).order_by(desc(PriceHistory.detected_at)).limit(10).all()
+        ).order_by(desc(PriceHistory.detected_at)).limit(15).all()
 
         return [
             {
@@ -189,8 +299,10 @@ async def get_price_drops():
             } for ph, prop in drops
         ]
 
+# --- PROTECTED ADMIN ENDPOINTS ---
+
 @app.get("/api/health")
-async def get_health():
+async def get_health(admin: bool = Depends(require_admin)):
     with get_session() as session:
         latest_run = session.query(RunSummary).order_by(desc(RunSummary.created_at)).first()
         if not latest_run:
@@ -223,8 +335,27 @@ async def get_health():
             "site_health": site_health
         }
 
+@app.post("/api/trigger")
+async def trigger_scan(admin: bool = Depends(require_admin)):
+    with open(TRIGGER_FILE, "w") as f:
+        f.write("1")
+    return {"message": "Varrimento manual iniciado pelo Administrador"}
+
+@app.post("/api/admin/backfill")
+async def trigger_backfill(admin: bool = Depends(require_admin)):
+    asyncio.create_task(asyncio.to_thread(run_backfill))
+    return {"message": "Processo de backfill analítico iniciado em segundo plano"}
+
 @app.websocket("/ws/logs")
 async def websocket_logs(websocket: WebSocket):
+    # Check session cookie from websocket handshake
+    cookie_token = websocket.cookies.get("imobot_session")
+    query_token = websocket.query_params.get("token")
+    
+    if cookie_token != AUTH_SECRET_TOKEN and query_token != AUTH_SECRET_TOKEN:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
     try:
         if os.path.exists(LOG_FILE):
@@ -247,12 +378,6 @@ async def websocket_logs(websocket: WebSocket):
                 await asyncio.sleep(2)
     except WebSocketDisconnect:
         pass
-
-@app.post("/api/trigger")
-async def trigger_scan():
-    with open("/app/trigger.flag", "w") as f:
-        f.write("1")
-    return {"message": "Scan triggered"}
 
 if __name__ == "__main__":
     import uvicorn

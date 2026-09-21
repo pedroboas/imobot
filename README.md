@@ -15,6 +15,8 @@ The project consists of four main components managed via Docker Compose:
 
 - RE/MAX (`remax.pt`)
 - ERA Imobiliária (`era.pt`)
+- Century 21 (`century21.pt`)
+- CustoJusto (`custojusto.pt`)
 - Imovirtual (`imovirtual.com`)
 - OLX (`olx.pt`)
 - iad Portugal (`iadportugal.pt`)
@@ -28,7 +30,7 @@ The project consists of four main components managed via Docker Compose:
 
 Configuration is managed through environment variables or a `.env` file:
 
-| Variable | Description | Example |
+| Variable | Description | Default / Example |
 | --- | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@imobot_db:5432/imoveis` |
 | `TELEGRAM_TOKEN` | Telegram bot API token | `your_bot_token_here` |
@@ -37,6 +39,9 @@ Configuration is managed through environment variables or a `.env` file:
 | `SCRAPE_INTERVAL` | Seconds between scrape cycles | `1800` |
 | `CONCURRENCY_LIMIT` | Maximum concurrent page workers | `2` |
 | `MIN_PRICE` | Minimum price filter in euros | `100000` |
+| `ADMIN_USER` | Dashboard administrator username | `admin` |
+| `ADMIN_PASSWORD` | Dashboard administrator password | `admin123` |
+| `SESSION_SECRET` | Secret key for secure admin session cookies | `your_random_secret_token` |
 
 ### Search URLs
 
