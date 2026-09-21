@@ -25,7 +25,14 @@ from playwright.async_api import async_playwright
 from dotenv import load_dotenv
 
 # Import local modules for database and specialized site adapters
-from database import init_db, is_property_new, save_property, save_scrape_log, save_run_summary
+from database import (
+    init_db, is_property_new, get_property, save_property,
+    update_property_price_and_seen, update_property_seen,
+    save_scrape_log, save_run_summary
+)
+from analytics.extractor import enrich_property
+from analytics.engine import evaluate_property_opportunity, get_market_benchmarks
+
 from adapters.imovirtual import parse_imovirtual
 from adapters.idealista import parse_idealista
 from adapters.olx import parse_olx
@@ -476,27 +483,96 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
                 logger.info(f"[SUCESSO] {search_url} | {parser_name} | Total: {len(found_properties)} | Válidos: {len(valid_properties)}")
 
             new_count_site = 0
-            for prop in valid_properties:
+            # Fetch real-time market baseline benchmarks from DB
+            benchmarks = await asyncio.to_thread(get_market_benchmarks)
+
+            for raw_prop in valid_properties:
                 try:
-                    is_new = await asyncio.to_thread(is_property_new, prop['id'])
+                    # Enrich property attributes (typology, parish, area, price, features)
+                    prop = enrich_property(raw_prop)
+                    eval_data = evaluate_property_opportunity(prop, benchmarks)
+                    prop_id = prop['id']
+                    
+                    is_new = await asyncio.to_thread(is_property_new, prop_id)
                     if is_new:
-                        logger.info(f"NOVA PROPRIEDADE: {prop['title']} - {prop['price']}")
+                        logger.info(f"NOVA PROPRIEDADE: {prop['title']} - {prop['price']} (Score: {eval_data['score']}/100)")
                         img_url = prop.get('image_url')
                         await asyncio.to_thread(
-                            save_property, prop['id'], prop['site'], prop['title'], prop['url'], prop['price'], img_url
+                            save_property,
+                            prop_id=prop_id,
+                            site=prop['site'],
+                            title=prop['title'],
+                            url=prop['url'],
+                            price=prop['price'],
+                            image_url=img_url,
+                            numeric_price=prop.get('numeric_price'),
+                            typology=prop.get('typology'),
+                            property_type=prop.get('property_type'),
+                            parish=prop.get('parish'),
+                            area_m2=prop.get('area_m2'),
+                            price_per_m2=prop.get('price_per_m2'),
+                            condition=prop.get('condition'),
+                            has_garage=prop.get('has_garage', False),
+                            has_elevator=prop.get('has_elevator', False),
+                            opportunity_score=eval_data.get('score', 50)
                         )
                         
                         site_name = prop['site'].capitalize()
                         
+                        # Build Telegram Notification
+                        header = "🔥 <b>Oportunidade de Mercado!</b>" if eval_data.get('is_bargain') else "🏠 <b>Nova Casa Encontrada!</b>"
+                        
+                        details = []
+                        if prop.get('parish'):
+                            details.append(f"<b>Zona:</b> {html.escape(prop['parish'])} ({html.escape(prop.get('typology', 'T2'))})")
+                        if prop.get('area_m2'):
+                            details.append(f"<b>Área:</b> {prop['area_m2']} m²")
+                        if eval_data.get('is_bargain'):
+                            details.append(f"<b>Score:</b> {eval_data['score']}/100 ({eval_data['diff_pct']}% vs. mercado)")
+
+                        details_str = ("\n" + "\n".join(details)) if details else ""
+
                         msg = (
-                            f"🏠 <b>Nova Casa Encontrada!</b>\n\n"
+                            f"{header}\n\n"
                             f"<b>Título:</b> {html.escape(prop['title'])}\n"
-                            f"<b>Preço:</b> {html.escape(prop['price'])}\n"
+                            f"<b>Preço:</b> {html.escape(prop['price'])}{details_str}\n"
                             f"<b>Site:</b> {html.escape(site_name)}\n\n"
                             f"<a href='{html.escape(prop['url'])}'>Ver no site</a>"
                         )
                         await send_telegram_message(msg, img_url)
                         new_count_site += 1
+                    else:
+                        # Existing property: check for price changes / price drop
+                        existing = await asyncio.to_thread(get_property, prop_id)
+                        if existing and prop.get('numeric_price'):
+                            old_num = existing.get('numeric_price')
+                            new_num = prop.get('numeric_price')
+                            
+                            price_drop = await asyncio.to_thread(
+                                update_property_price_and_seen,
+                                prop_id,
+                                prop['price'],
+                                new_num,
+                                existing.get('price'),
+                                old_num
+                            )
+                            
+                            # If a real price drop of at least 1,000 € occurred, alert immediately!
+                            if price_drop and abs(price_drop['change_amount']) >= 1000:
+                                logger.info(f"DESCIDA DE PREÇO: {prop['title']} ({price_drop['old_price']} -> {price_drop['new_price']})")
+                                site_name = prop['site'].capitalize()
+                                drop_msg = (
+                                    f"📉 <b>Descida de Preço Detetada!</b>\n\n"
+                                    f"<b>Título:</b> {html.escape(prop['title'])}\n"
+                                    f"<b>Preço Anterior:</b> {html.escape(price_drop['old_price'])}\n"
+                                    f"<b>Novo Preço:</b> {html.escape(price_drop['new_price'])} ({price_drop['change_amount']:+,} € / {price_drop['change_pct']}%)\n"
+                                    f"<b>Zona:</b> {html.escape(prop.get('parish', 'Barcelos'))}\n"
+                                    f"<b>Site:</b> {html.escape(site_name)}\n\n"
+                                    f"<a href='{html.escape(prop['url'])}'>Ver no site</a>"
+                                )
+                                await send_telegram_message(drop_msg, prop.get('image_url'))
+                        else:
+                            await asyncio.to_thread(update_property_seen, prop_id)
                 except Exception as e_db:
                     logger.error(f"Erro DB/Telegram: {e_db}")
             

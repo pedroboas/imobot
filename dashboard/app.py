@@ -3,9 +3,9 @@ import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, desc
+from sqlalchemy import create_engine, desc, func
 from sqlalchemy.orm import sessionmaker
-from database import Base, Property, ScrapeLog, RunSummary, get_session
+from database import Base, Property, PriceHistory, ScrapeLog, RunSummary, get_session
 import json
 import secrets
 from fastapi import Depends, HTTPException, status
@@ -36,13 +36,13 @@ async def get_stats():
         return {
             "total_properties": total,
             "by_site": by_site,
-            "status": "Online" # In a real scenario, we could check if scraper process is alive
+            "status": "Online"
         }
 
 @app.get("/api/properties")
 async def get_recent_properties():
     with get_session() as session:
-        props = session.query(Property).order_by(desc(Property.found_at)).limit(10).all()
+        props = session.query(Property).order_by(desc(Property.found_at)).limit(12).all()
         return [
             {
                 "id": p.id,
@@ -50,20 +50,152 @@ async def get_recent_properties():
                 "title": p.title,
                 "url": p.url,
                 "price": p.price,
+                "numeric_price": p.numeric_price,
+                "typology": p.typology or "T2",
+                "parish": p.parish or "Barcelos",
+                "area_m2": p.area_m2,
+                "price_per_m2": p.price_per_m2,
+                "condition": p.condition,
+                "has_garage": p.has_garage,
+                "has_elevator": p.has_elevator,
+                "opportunity_score": p.opportunity_score or 50,
                 "image_url": p.image_url,
-                "found_at": p.found_at.isoformat()
+                "found_at": p.found_at.isoformat() if p.found_at else None
             } for p in props
+        ]
+
+@app.get("/api/analytics/overview")
+async def get_analytics_overview():
+    with get_session() as session:
+        total = session.query(Property).count()
+        
+        avg_price = session.query(func.avg(Property.numeric_price)).filter(
+            Property.numeric_price > 0
+        ).scalar() or 0
+        
+        avg_m2 = session.query(func.avg(Property.price_per_m2)).filter(
+            Property.price_per_m2 > 0
+        ).scalar() or 0
+        
+        total_drops = session.query(PriceHistory).count()
+        total_deals = session.query(Property).filter(Property.opportunity_score >= 78).count()
+        
+        # Calculate median price using sorted list or percentile
+        prices = [r[0] for r in session.query(Property.numeric_price).filter(Property.numeric_price > 0).order_by(Property.numeric_price).all()]
+        median_price = prices[len(prices)//2] if prices else 0
+
+        return {
+            "total_properties": total,
+            "avg_price": int(round(avg_price)),
+            "median_price": int(median_price),
+            "avg_price_per_m2": int(round(avg_m2)),
+            "total_price_drops": total_drops,
+            "total_deals": total_deals
+        }
+
+@app.get("/api/analytics/by-typology")
+async def get_analytics_by_typology():
+    with get_session() as session:
+        rows = session.query(
+            Property.typology,
+            func.count(Property.id).label("count"),
+            func.avg(Property.numeric_price).label("avg_price"),
+            func.min(Property.numeric_price).label("min_price"),
+            func.max(Property.numeric_price).label("max_price"),
+            func.avg(Property.price_per_m2).label("avg_m2")
+        ).filter(
+            Property.numeric_price > 0,
+            Property.typology.isnot(None)
+        ).group_by(Property.typology).order_by(Property.typology).all()
+
+        return [
+            {
+                "typology": r.typology,
+                "count": r.count,
+                "avg_price": int(round(r.avg_price)) if r.avg_price else 0,
+                "min_price": r.min_price or 0,
+                "max_price": r.max_price or 0,
+                "avg_price_per_m2": int(round(r.avg_m2)) if r.avg_m2 else None
+            } for r in rows if r.typology in ["T1", "T2", "T3", "T4", "T5"]
+        ]
+
+@app.get("/api/analytics/by-parish")
+async def get_analytics_by_parish():
+    with get_session() as session:
+        rows = session.query(
+            Property.parish,
+            func.count(Property.id).label("count"),
+            func.avg(Property.numeric_price).label("avg_price"),
+            func.avg(Property.price_per_m2).label("avg_m2")
+        ).filter(
+            Property.numeric_price > 0,
+            Property.parish.isnot(None)
+        ).group_by(Property.parish).order_by(desc("count")).limit(12).all()
+
+        return [
+            {
+                "parish": r.parish,
+                "count": r.count,
+                "avg_price": int(round(r.avg_price)) if r.avg_price else 0,
+                "avg_price_per_m2": int(round(r.avg_m2)) if r.avg_m2 else None
+            } for r in rows
+        ]
+
+@app.get("/api/analytics/deals")
+async def get_top_deals():
+    with get_session() as session:
+        deals = session.query(Property).filter(
+            Property.opportunity_score >= 70,
+            Property.numeric_price > 0
+        ).order_by(desc(Property.opportunity_score), desc(Property.found_at)).limit(10).all()
+
+        return [
+            {
+                "id": d.id,
+                "title": d.title,
+                "price": d.price,
+                "numeric_price": d.numeric_price,
+                "typology": d.typology or "T2",
+                "parish": d.parish or "Barcelos",
+                "area_m2": d.area_m2,
+                "score": d.opportunity_score,
+                "site": d.site,
+                "url": d.url,
+                "image_url": d.image_url
+            } for d in deals
+        ]
+
+@app.get("/api/analytics/price-drops")
+async def get_price_drops():
+    with get_session() as session:
+        drops = session.query(
+            PriceHistory, Property
+        ).outerjoin(
+            Property, PriceHistory.property_id == Property.id
+        ).order_by(desc(PriceHistory.detected_at)).limit(10).all()
+
+        return [
+            {
+                "id": ph.id,
+                "property_id": ph.property_id,
+                "title": prop.title if prop else "Imóvel",
+                "url": prop.url if prop else "#",
+                "site": prop.site if prop else "",
+                "old_price": ph.old_price,
+                "new_price": ph.new_price,
+                "change_amount": ph.change_amount,
+                "change_pct": ph.change_pct,
+                "detected_at": ph.detected_at.isoformat() if ph.detected_at else None
+            } for ph, prop in drops
         ]
 
 @app.get("/api/health")
 async def get_health():
     with get_session() as session:
-        # Get the latest run
         latest_run = session.query(RunSummary).order_by(desc(RunSummary.created_at)).first()
         if not latest_run:
             return {"latest_run": None, "site_health": []}
         
-        # Get site health for the latest run
         site_logs = session.query(ScrapeLog).filter(ScrapeLog.run_id == latest_run.run_id).all()
         
         site_health = []
@@ -95,14 +227,12 @@ async def get_health():
 async def websocket_logs(websocket: WebSocket):
     await websocket.accept()
     try:
-        # Initial tail of the last few lines
         if os.path.exists(LOG_FILE):
             with open(LOG_FILE, "r") as f:
                 lines = f.readlines()[-50:]
                 for line in lines:
                     await websocket.send_text(line.strip())
         
-        # Stream new lines
         while True:
             if os.path.exists(LOG_FILE):
                 with open(LOG_FILE, "r") as f:
@@ -120,9 +250,6 @@ async def websocket_logs(websocket: WebSocket):
 
 @app.post("/api/trigger")
 async def trigger_scan():
-    # In this Docker setup, a simple way to trigger is to create a signal file
-    # that the scraper.py checks periodically or use a more advanced IPC.
-    # For now, we'll create a 'trigger.flag' file.
     with open("/app/trigger.flag", "w") as f:
         f.write("1")
     return {"message": "Scan triggered"}
