@@ -39,12 +39,14 @@ NORMALIZED_PARISHES = [(p, normalize_text(p)) for p in sorted(BARCELOS_PARISHES,
 
 def extract_numeric_price(price_str):
     """
-    Converts formatted price strings like '250.000 €', '185 000€', '230000€' to integer 250000.
+    Converts formatted price strings like '250.000 €', '185 000€', '230.000,00 €' to integer 250000.
     """
-    if not price_str:
+    if not price_str or "consulta" in str(price_str).lower():
         return None
     try:
-        clean = re.sub(r'[^\d]', '', str(price_str))
+        # Remove trailing decimal cents (e.g., ',00' or '.00' before € or end)
+        s = re.sub(r'[,.]\d{2}(?=\s*(?:€|eur|$))', '', str(price_str), flags=re.I)
+        clean = re.sub(r'[^\d]', '', s)
         if clean:
             val = int(clean)
             if 10000 <= val <= 20000000:

@@ -188,7 +188,7 @@ async def get_analytics_overview():
             Property.price_per_m2 > 0
         ).scalar() or 0
         
-        total_drops = session.query(PriceHistory).count()
+        total_drops = session.query(PriceHistory).filter(PriceHistory.change_amount < 0).count()
         total_deals = session.query(Property).filter(Property.opportunity_score >= 78).count()
         
         prices = [r[0] for r in session.query(Property.numeric_price).filter(Property.numeric_price > 0).order_by(Property.numeric_price).all()]
@@ -282,6 +282,8 @@ async def get_price_drops():
             PriceHistory, Property
         ).outerjoin(
             Property, PriceHistory.property_id == Property.id
+        ).filter(
+            PriceHistory.change_amount < 0
         ).order_by(desc(PriceHistory.detected_at)).limit(15).all()
 
         return [

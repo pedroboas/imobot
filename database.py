@@ -280,6 +280,10 @@ def update_property_price_and_seen(prop_id, new_price, new_numeric_price, old_pr
                         "change_amount": change_amount,
                         "change_pct": change_pct
                     }
+            elif new_numeric_price and not prop.numeric_price:
+                prop.numeric_price = new_numeric_price
+                if prop.area_m2 and prop.area_m2 > 0:
+                    prop.price_per_m2 = round(new_numeric_price / prop.area_m2, 2)
                     
             session.commit()
             return price_drop

@@ -17,13 +17,12 @@ def run_backfill():
     logger.info("Initializing database migrations...")
     init_db()
     
-    benchmarks = get_market_benchmarks()
-    
     with get_session() as session:
         props = session.query(Property).all()
         logger.info(f"Found {len(props)} total properties in database to process.")
         
-        updated_count = 0
+        enriched_cache = {}
+        # Pass 1: Enrich basic attributes & clean up invalid placeholder/logo images
         for p in props:
             raw_dict = {
                 "id": p.id,
@@ -33,7 +32,7 @@ def run_backfill():
                 "site": p.site
             }
             enriched = enrich_property(raw_dict)
-            eval_data = evaluate_property_opportunity(enriched, benchmarks)
+            enriched_cache[p.id] = enriched
             
             p.numeric_price = enriched.get("numeric_price")
             p.typology = enriched.get("typology")
@@ -44,19 +43,37 @@ def run_backfill():
             p.condition = enriched.get("condition")
             p.has_garage = enriched.get("has_garage", False)
             p.has_elevator = enriched.get("has_elevator", False)
-            p.opportunity_score = eval_data.get("score", 50)
             
+            if p.image_url and any(bad in p.image_url.lower() for bad in [
+                "no-image", "no_image", "noimage", "s=0x64", "s=64x", "s=0x32", "s=120x"
+            ]):
+                p.image_url = None
+
             if not p.last_seen_at:
                 p.last_seen_at = p.found_at
             if p.is_active is None:
                 p.is_active = True
-                
-            updated_count += 1
-            if updated_count % 50 == 0:
-                logger.info(f"Processed {updated_count}/{len(props)} properties...")
-                
+
         session.commit()
-        logger.info(f"✅ Successfully backfilled {updated_count} properties in the database!")
+
+    # Compute benchmarks now that all properties have parish, typology, and numeric_price
+    benchmarks = get_market_benchmarks()
+
+    with get_session() as session:
+        props = session.query(Property).all()
+        updated_count = 0
+        for p in props:
+            enriched = enriched_cache.get(p.id) or enrich_property({
+                "id": p.id, "title": p.title, "url": p.url, "price": p.price, "site": p.site
+            })
+            eval_data = evaluate_property_opportunity(enriched, benchmarks)
+            p.opportunity_score = eval_data.get("score", 50)
+            updated_count += 1
+            if updated_count % 100 == 0:
+                logger.info(f"Scored {updated_count}/{len(props)} properties...")
+
+        session.commit()
+        logger.info(f"✅ Successfully backfilled and scored {updated_count} properties in the database!")
 
 if __name__ == "__main__":
     run_backfill()

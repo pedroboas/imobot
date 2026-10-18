@@ -31,11 +31,18 @@ def extract_image(element, base_url=None):
             continue
             
         src_lower = src.lower()
-        # Ignore common tracking pixels, icons, logos, etc.
+        alt_lower = (img.get('alt') or '').lower()
+        cls_lower = ' '.join(img.get('class') or []).lower()
+
+        # Ignore common tracking pixels, icons, agency logos, placeholders, etc.
         if any(keyword in src_lower for keyword in [
             'logo', 'avatar', 'icon', 'marker', 'profile', 'spinner', 
-            'lazy-loader', 'placeholder', 'transparent', 'pixel', 'heart', 'star', 'check'
+            'lazy-loader', 'placeholder', 'transparent', 'pixel', 'heart', 'star', 'check',
+            'no-image', 'no_image', 'noimage', 's=0x64', 's=64x', 's=0x32', 's=120x'
         ]):
+            continue
+
+        if any(keyword in alt_lower or keyword in cls_lower for keyword in ['logo', 'avatar', 'agency', 'agência', 'agencia']):
             continue
             
         # Verify it has an image extension or looks like a dynamic image path

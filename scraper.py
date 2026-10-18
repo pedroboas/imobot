@@ -202,7 +202,8 @@ def get_parser(url):
 def clean_price_value(price_str):
     if not price_str or "consulta" in price_str.lower():
         return 0
-    numeric_str = "".join(re.findall(r'\d+', price_str))
+    cleaned = re.sub(r'[,.]\d{2}(?=\s*(?:€|eur|$))', '', price_str, flags=re.IGNORECASE)
+    numeric_str = "".join(re.findall(r'\d+', cleaned))
     try:
         return int(numeric_str) if numeric_str else 0
     except ValueError:
@@ -677,8 +678,14 @@ async def run_scraper():
         # Summary
         total_new_found = sum(r['new'] for r in results)
         success_count = sum(1 for r in results if r['status'] == '✅')
-        error_count = sum(1 for r in results if r['status'] == '❌' and r.get('error') != 'Blocked/Captcha')
-        blocked_count = sum(1 for r in results if r.get('error') == 'Blocked/Captcha')
+        blocked_count = sum(
+            1 for r in results
+            if r['status'] == '❌' and any(
+                kw in str(r.get('error', '')).lower()
+                for kw in ('blocked', 'challenge', 'captcha')
+            )
+        )
+        error_count = sum(1 for r in results if r['status'] == '❌') - blocked_count
         total_found = sum(r['found'] for r in results)
         
         logger.info("="*50)
@@ -711,6 +718,12 @@ async def async_main():
     if not await wait_for_db():
         logger.critical("Não foi possível ligar à base de dados. Encerrando.")
         return
+
+    try:
+        from analytics.backfill import run_backfill
+        await asyncio.to_thread(run_backfill)
+    except Exception as e:
+        logger.warning(f"Erro ao executar backfill inicial de estatísticas: {e}")
 
     while True:
         # Check for manual trigger
