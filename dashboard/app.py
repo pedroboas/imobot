@@ -107,7 +107,11 @@ def require_admin(request: Request):
 
 @app.get("/")
 async def get_dashboard(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 
 @app.get("/api/auth/status")

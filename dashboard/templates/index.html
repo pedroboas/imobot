@@ -1,1203 +1,1262 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImoBot | Plataforma de Inteligência Imobiliária de Barcelos</title>
-    <link rel="stylesheet" href="/static/style.css?v=2.0">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anúncios — imobot</title>
+  <link rel="stylesheet" href="/static/style.css?v=3.0">
 </head>
-
 <body>
-    <div class="glass-bg"></div>
-    <div class="container">
-        <!-- Top Header -->
-        <header>
-            <div class="logo" style="cursor:pointer;" onclick="switchTab('catalog')">
-                <h1>IMO<span>BOT</span></h1>
-                <p>Plataforma de Inteligência Imobiliária &bull; Barcelos</p>
-            </div>
-            
-            <div class="header-actions">
-                <div class="status-badge" id="bot-status">
-                    <span class="dot"></span> Monitorização Ativa
-                </div>
-                
-                <div id="auth-container">
-                    <button id="login-modal-btn" class="btn-auth" onclick="openLoginModal()">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        <span>Acesso Admin</span>
-                    </button>
-                </div>
-            </div>
-        </header>
+  <a class="visualmente-escondido" href="#conteudo-principal">Saltar para o conteúdo</a>
 
-        <!-- Navigation Tabs -->
-        <nav class="nav-tabs">
-            <button class="tab-btn active" onclick="switchTab('catalog')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                Anúncios & Catálogo
-            </button>
-            <button class="tab-btn" onclick="switchTab('analytics')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                Indicadores de Mercado
-            </button>
-            <button class="tab-btn" onclick="switchTab('deals')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                Oportunidades & Descidas
-            </button>
-            <button class="tab-btn" onclick="switchTab('admin')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                Painel do Sistema
-            </button>
-        </nav>
+  <header class="cabecalho">
+    <div class="contentor">
+      <a class="cabecalho__marca" onclick="switchTab('catalog')">imobot</a>
 
-        <!-- TAB 1: CATALOG & SEARCH -->
-        <div id="tab-catalog" class="tab-content active">
-            <!-- Filter & Search Toolbar -->
-            <div class="filter-toolbar">
-                <div class="search-box">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <input type="text" id="search-input" placeholder="Pesquisar por título, freguesia, portal ou ID..." oninput="debounceSearch()">
-                </div>
-                
-                <div class="filter-selects">
-                    <select id="filter-site" onchange="loadProperties(true)">
-                        <option value="Todos">Todos os Portais</option>
-                    </select>
+      <nav class="navegacao" aria-label="Navegação principal">
+        <button class="navegacao__item navegacao__item--activo" id="nav-catalog" onclick="switchTab('catalog')">Anúncios</button>
+        <button class="navegacao__item" id="nav-analytics" onclick="switchTab('analytics')">Indicadores</button>
+        <button class="navegacao__item" id="nav-deals" onclick="switchTab('deals')">Oportunidades &amp; Descidas</button>
+        <button class="navegacao__item" id="nav-admin" onclick="switchTab('admin')">Sistema</button>
+      </nav>
 
-                    <select id="filter-type" onchange="loadProperties(true)">
-                        <option value="Todos">Todos os Tipos</option>
-                        <option value="apartamento">Apartamentos</option>
-                        <option value="moradia">Moradias</option>
-                        <option value="terreno">Terrenos / Quintas</option>
-                    </select>
-
-                    <select id="filter-typology" onchange="loadProperties(true)">
-                        <option value="Todos">Todas as Tipologias</option>
-                        <option value="T0">T0</option>
-                        <option value="T1">T1</option>
-                        <option value="T2">T2</option>
-                        <option value="T3">T3</option>
-                        <option value="T4">T4</option>
-                        <option value="T5">T5+</option>
-                    </select>
-
-                    <select id="filter-parish" onchange="loadProperties(true)">
-                        <option value="Todas">Todas as Freguesias</option>
-                    </select>
-
-                    <input type="number" id="filter-min-price" placeholder="Preço mín. (€)" min="0" step="5000" oninput="debounceSearch()">
-                    <input type="number" id="filter-max-price" placeholder="Preço máx. (€)" min="0" step="5000" oninput="debounceSearch()">
-
-                    <select id="filter-status" onchange="loadProperties(true)">
-                        <option value="active">Ativos</option>
-                        <option value="removed">Removidos</option>
-                        <option value="all">Todos</option>
-                    </select>
-
-                    <select id="filter-sort" onchange="loadProperties(true)">
-                        <option value="newest">Mais Recentes</option>
-                        <option value="score_desc">🔥 Maior Oportunidade</option>
-                        <option value="price_asc">Preço: Menor para Maior</option>
-                        <option value="price_desc">Preço: Maior para Menor</option>
-                        <option value="oldest">Mais Antigos</option>
-                    </select>
-
-                    <button class="btn-secondary" onclick="resetFilters()" title="Limpar filtros">Limpar</button>
-                </div>
-            </div>
-
-            <div class="catalog-summary-bar">
-                <span id="catalog-count-label">A carregar anúncios...</span>
-                <span style="font-size: 0.8rem;">💡 Clica em qualquer imóvel para ver a <strong>Ficha de Comparação & Histórico</strong></span>
-            </div>
-
-            <div class="properties-grid" id="properties-container">
-                <div class="card-skeleton"></div>
-                <div class="card-skeleton"></div>
-                <div class="card-skeleton"></div>
-            </div>
-
-            <div class="load-more-container" id="load-more-wrap" style="display: none;">
-                <button class="btn-secondary" id="load-more-btn" onclick="loadProperties(false)">Carregar mais anúncios</button>
-            </div>
+      <div class="cabecalho__accoes">
+        <button type="button" class="botao botao--pequeno" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro">Tema</button>
+        <div id="auth-container">
+          <button type="button" class="entrar" onclick="openLoginModal()">Entrar</button>
         </div>
-
-        <!-- TAB 2: MARKET ANALYTICS & INDICATORS -->
-        <div id="tab-analytics" class="tab-content">
-            <div style="margin-bottom: 1.25rem;">
-                <h2 style="font-size: 1.4rem; font-weight: 700;">Indicadores do Mercado de Barcelos</h2>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">O mercado imobiliário de Barcelos tal como os portais o mostram hoje — preços pedidos, medianas e distribuição real de stock.</p>
-            </div>
-
-            <!-- KPIs Row -->
-            <div class="analytics-grid">
-                <div class="metric-card">
-                    <span class="label">Preço Mediano (Venda)</span>
-                    <span class="value" id="kpi-median-price">... €</span>
-                    <span class="subtext" id="kpi-iqr-subtext">50% das ofertas entre p25 e p75</span>
-                </div>
-                <div class="metric-card">
-                    <span class="label">Preço Médio (Barcelos)</span>
-                    <span class="value" id="kpi-avg-price">... €</span>
-                    <span class="subtext" id="kpi-sale-count-subtext">Amostra geral de venda</span>
-                </div>
-                <div class="metric-card">
-                    <span class="label">Preço Mediano / m²</span>
-                    <span class="value" id="kpi-avg-m2">... €/m²</span>
-                    <span class="subtext" id="kpi-m2-subtext">Mediana por área declarada</span>
-                </div>
-                <div class="metric-card">
-                    <span class="label">Descidas de Preço</span>
-                    <span class="value" style="color: #f87171;" id="kpi-drops">...</span>
-                    <span class="subtext">Cortes reais detetados</span>
-                </div>
-                <div class="metric-card">
-                    <span class="label">Oportunidades (Score ≥ 78)</span>
-                    <span class="value" style="color: #10b981;" id="kpi-deals">...</span>
-                    <span class="subtext">Imóveis abaixo da mediana local</span>
-                </div>
-            </div>
-
-            <!-- Charts Row -->
-            <div class="charts-container">
-                <div class="chart-card">
-                    <h3>📊 Preço Mediano vs. Médio por Tipologia</h3>
-                    <canvas id="typologyChart" height="220"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>📍 Preço Mediano por Freguesia (Top Zonas)</h3>
-                    <canvas id="parishChart" height="220"></canvas>
-                </div>
-            </div>
-
-            <!-- Detailed Editorial Indicators Stack (like imo.residvia.com/indicadores) -->
-            <div class="indicators-stack">
-                <!-- 1. Sample Breakdown ("O que entra nas contas") -->
-                <article class="panel">
-                    <h2>🧮 O que entra nas contas (Qualidade da Amostra)</h2>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">Transparência sobre os anúncios recolhidos e o que é incluído ou filtrado no cálculo das medianas.</p>
-                    <div class="table-scroll">
-                        <table class="data-table">
-                            <tbody id="sample-breakdown-tbody">
-                                <tr><td>A carregar amostra...</td><td class="num">...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </article>
-
-                <!-- 2. Two-column: By Typology & By Type -->
-                <div class="charts-container">
-                    <article class="panel">
-                        <h2>🏠 Por Tipologia</h2>
-                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.85rem;">Quanto mais pequena a habitação, mais caro tende a sair o m².</p>
-                        <div class="table-scroll">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tipologia</th>
-                                        <th class="num">Mediana</th>
-                                        <th class="bar-cell"></th>
-                                        <th class="num">€/m²</th>
-                                        <th class="num">Imóveis</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="table-by-typology"></tbody>
-                            </table>
-                        </div>
-                    </article>
-
-                    <article class="panel">
-                        <h2>🏗️ Por Tipo de Imóvel & Antiguidade</h2>
-                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.85rem;">Comparação direta entre Apartamentos, Moradias e Terrenos.</p>
-                        <div class="table-scroll" style="margin-bottom: 1.5rem;">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tipo</th>
-                                        <th class="num">Preço Mediano</th>
-                                        <th class="bar-cell"></th>
-                                        <th class="num">€/m²</th>
-                                        <th class="num">Imóveis</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="table-by-type"></tbody>
-                            </table>
-                        </div>
-
-                        <h3 style="font-size: 0.95rem; margin-bottom: 0.65rem; color: var(--text-primary);">⏱️ Há quanto tempo estão monitorizados</h3>
-                        <div id="age-brackets-container" class="bracket-list"></div>
-                    </article>
-                </div>
-
-                <!-- 3. Two-column: Price Brackets ("Onde está o stock") & By Portal -->
-                <div class="charts-container">
-                    <article class="panel">
-                        <h2>💰 Onde está o stock (Escalões de Preço)</h2>
-                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">Contagem de imóveis disponíveis em cada faixa de preço em Barcelos.</p>
-                        <div id="price-brackets-container" class="bracket-list"></div>
-                    </article>
-
-                    <article class="panel">
-                        <h2>🌐 Distribuição por Portal Imobiliário</h2>
-                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.85rem;">Quota de anúncios ativos e mediana de preço por plataforma monitorizada.</p>
-                        <div class="table-scroll" style="max-height: 360px;">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Portal</th>
-                                        <th class="num">Quota</th>
-                                        <th class="bar-cell"></th>
-                                        <th class="num">Preço Mediano</th>
-                                        <th class="num">Anúncios</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="table-by-site"></tbody>
-                            </table>
-                        </div>
-                    </article>
-                </div>
-
-                <!-- 4. Full Parish Breakdown ("Por Freguesia") -->
-                <article class="panel">
-                    <h2>📍 Quadro Completo por Freguesia</h2>
-                    <p style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 1rem;">Clica em qualquer freguesia para filtrar o catálogo de anúncios diretamente por essa zona.</p>
-                    <div class="table-scroll">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Freguesia</th>
-                                    <th class="num">Preço Mediano</th>
-                                    <th class="bar-cell"></th>
-                                    <th class="num">Preço Médio</th>
-                                    <th class="num">Intervalo (Mín – Máx)</th>
-                                    <th class="num">Imóveis</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-by-parish"></tbody>
-                        </table>
-                    </div>
-                </article>
-            </div>
-        </div>
-
-        <!-- TAB 3: DEALS & PRICE DROPS -->
-        <div id="tab-deals" class="tab-content">
-            <div class="charts-container">
-                <section class="panel">
-                    <h2 style="display: flex; align-items: center; justify-content: space-between;">
-                        <span>🔥 Top Oportunidades de Negócio</span>
-                        <span class="badge-deal">Score ≥ 70</span>
-                    </h2>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">Imóveis identificados pelo algoritmo com preço significativamente abaixo da mediana da freguesia e tipologia.</p>
-                    <div id="deals-list" class="deals-vertical-list">
-                        <div class="site-item" style="opacity: 0.5;"><span class="site-name">A carregar oportunidades...</span></div>
-                    </div>
-                </section>
-
-                <section class="panel">
-                    <h2 style="display: flex; align-items: center; justify-content: space-between;">
-                        <span>📉 Histórico de Descidas de Preço</span>
-                        <span class="badge-drop">Price Drops</span>
-                    </h2>
-                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">Imóveis monitorizados que sofreram redução real de preço por parte do vendedor.</p>
-                    <div id="drops-list" class="deals-vertical-list">
-                        <div class="site-item" style="opacity: 0.5;"><span class="site-name">A carregar descidas...</span></div>
-                    </div>
-                </section>
-            </div>
-        </div>
-
-        <!-- TAB 4: SYSTEM & ADMIN PANEL (PROTECTED) -->
-        <div id="tab-admin" class="tab-content">
-            <div id="admin-locked-view" class="panel" style="text-align: center; padding: 4rem 2rem; display: none;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
-                <h2 style="justify-content: center; margin-bottom: 0.5rem; font-size: 1.5rem; color: var(--text-primary);">Acesso Administrativo Restrito</h2>
-                <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto 1.5rem;">As ações de controlo do motor de scraping, logs confidenciais e diagnóstico interno estão protegidas por palavra-passe.</p>
-                <button class="btn-primary" onclick="openLoginModal()">Autenticar como Administrador</button>
-            </div>
-
-            <div id="admin-unlocked-view" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25); padding: 1rem 1.5rem; border-radius: 16px; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <h3 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 2px;">👑 Sessão de Administrador Ativa</h3>
-                        <p style="font-size: 0.85rem; color: var(--text-secondary);">Tem controlo total sobre o motor de recolha e a base de dados.</p>
-                    </div>
-                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                        <button id="trigger-scan-btn" class="btn-primary" onclick="triggerManualScan()">⚡ Varrer Agora</button>
-                        <button class="btn-secondary" onclick="triggerBackfill()">🔄 Atualizar Métricas</button>
-                        <button class="btn-danger" onclick="logoutAdmin()">Sair</button>
-                    </div>
-                </div>
-
-                <div class="grid">
-                    <section class="panel stats-panel">
-                        <h2>Saúde dos Portais (Último Ciclo)</h2>
-                        <div class="sites-list" id="health-list">
-                            <div class="site-item"><span class="site-name">A carregar...</span></div>
-                        </div>
-                    </section>
-
-                    <section class="panel logs-panel">
-                        <div class="panel-header">
-                            <h2>Logs em Direto (Scraper Output)</h2>
-                            <span class="live-tag">LIVE FEED</span>
-                        </div>
-                        <div class="log-container" id="log-terminal">
-                            <div class="log-line system">> Conectando à stream de logs do scraper...</div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+  </header>
 
-    <!-- Property Detail Modal ("Ficha de Imóvel & Como se compara") -->
-    <div id="detail-modal" class="modal-backdrop" onclick="closeDetailModalOnOutside(event)">
-        <div class="modal-card detail-modal-card">
-            <div class="modal-header">
-                <h3 id="detail-modal-header-title">Ficha de Imóvel & Comparação de Mercado</h3>
-                <button class="close-btn" onclick="closeDetailModal()">&times;</button>
-            </div>
-            <div id="detail-modal-body">
-                <p style="color: var(--text-secondary);">A carregar dados do imóvel...</p>
-            </div>
-        </div>
-    </div>
+  <main class="contentor" id="conteudo-principal">
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal-backdrop" onclick="closeLoginModalOnOutside(event)">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>Autenticação de Administrador</h3>
-                <button class="close-btn" onclick="closeLoginModal()">&times;</button>
-            </div>
-            <form id="login-form" onsubmit="handleLogin(event)">
-                <div class="input-group">
-                    <label>Utilizador</label>
-                    <input type="text" id="login-user" required placeholder="admin" autocomplete="username">
-                </div>
-                <div class="input-group">
-                    <label>Palavra-passe</label>
-                    <input type="password" id="login-pass" required placeholder="••••••••" autocomplete="current-password">
-                </div>
-                <div id="login-error" class="error-msg" style="display: none;"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeLoginModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary" id="login-submit-btn">Entrar</button>
-                </div>
+    <!-- VISTA 1: ANÚNCIOS -->
+    <div id="tab-catalog" class="vista activa">
+      <div class="pilha">
+        <h1>Anúncios</h1>
+
+        <div class="cartao">
+          <div class="cartao__corpo">
+            <form class="formulario-filtros" onsubmit="event.preventDefault(); loadProperties(true);">
+              <div class="campo">
+                <label class="campo__rotulo" for="search-input">Pesquisa</label>
+                <input class="campo__entrada" type="text" id="search-input" placeholder="título, freguesia ou ref." oninput="debounceSearch()">
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-site">Portal</label>
+                <select class="campo__entrada" id="filter-site" onchange="loadProperties(true)">
+                  <option value="Todos">Todos os portais</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-type">Tipo</label>
+                <select class="campo__entrada" id="filter-type" onchange="loadProperties(true)">
+                  <option value="Todos">Todos os tipos</option>
+                  <option value="apartamento">apartamento</option>
+                  <option value="moradia">moradia</option>
+                  <option value="terreno">terreno</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-typology">Tipologia</label>
+                <select class="campo__entrada" id="filter-typology" onchange="loadProperties(true)">
+                  <option value="Todos">Todas as tipologias</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-parish">Freguesia</label>
+                <select class="campo__entrada" id="filter-parish" onchange="loadProperties(true)">
+                  <option value="Todas">Todas as freguesias</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-min-price">Preço mín.</label>
+                <input class="campo__entrada" type="number" id="filter-min-price" min="0" inputmode="numeric" oninput="debounceSearch()">
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-max-price">Preço máx.</label>
+                <input class="campo__entrada" type="number" id="filter-max-price" min="0" inputmode="numeric" oninput="debounceSearch()">
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-status">Estado</label>
+                <select class="campo__entrada" id="filter-status" onchange="loadProperties(true)">
+                  <option value="active" selected>Activos</option>
+                  <option value="removed">Removidos</option>
+                  <option value="all">Todos</option>
+                </select>
+              </div>
+
+              <div class="campo">
+                <label class="campo__rotulo" for="filter-sort">Ordenar por</label>
+                <select class="campo__entrada" id="filter-sort" onchange="loadProperties(true)">
+                  <option value="newest" selected>Mais recentes</option>
+                  <option value="score_desc">Abaixo do mercado</option>
+                  <option value="price_asc">Preço, do mais baixo</option>
+                  <option value="price_desc">Preço, do mais alto</option>
+                  <option value="oldest">Mais antigos</option>
+                </select>
+              </div>
+
+              <div style="display:flex; gap:8px;">
+                <button type="submit" class="botao botao--primario">Filtrar</button>
+                <button type="button" class="botao" onclick="resetFilters()">Limpar</button>
+              </div>
             </form>
+          </div>
         </div>
+
+        <div class="cartao">
+          <div class="cartao__cabecalho">
+            <p class="texto-suave" id="catalog-count-label">A carregar anúncios...</p>
+          </div>
+          <div class="cartao__corpo" id="properties-container">
+            <p class="texto-suave">A carregar...</p>
+          </div>
+        </div>
+
+        <div id="load-more-wrap" style="display: none; justify-content: center;">
+          <button type="button" class="botao" id="load-more-btn" onclick="loadProperties(false)">Carregar mais anúncios</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Toast Notification Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <!-- VISTA 2: FICHA DO ANÚNCIO (inline, como imo.residvia.com/anuncio/...) -->
+    <div id="tab-detail" class="vista">
+      <div class="pilha">
+        <div>
+          <button type="button" class="botao botao--pequeno" onclick="closePropertyDetail()">&larr; Voltar à lista</button>
+        </div>
+        <div id="detail-view-body" class="pilha"></div>
+      </div>
+    </div>
 
-    <script>
-        let typoChartInstance = null;
-        let parishChartInstance = null;
-        let searchTimeout = null;
-        let isAuthenticated = false;
-        let currentOffset = 0;
-        const PAGE_LIMIT = 36;
+    <!-- VISTA 3: INDICADORES -->
+    <div id="tab-analytics" class="vista">
+      <div class="pilha">
+        <div>
+          <h1>Indicadores</h1>
+          <p class="texto-suave texto-legivel">O mercado de Barcelos tal como os portais o mostram hoje — preços pedidos, não preços de venda. Cada número traz o número de imóveis de que foi tirado.</p>
+        </div>
 
-        function fmtEuro(val) {
-            if (!val && val !== 0) return 'N/D';
-            return `${Number(val).toLocaleString('pt-PT')} €`;
-        }
+        <!-- O que entra nas contas -->
+        <article class="cartao">
+          <div class="cartao__cabecalho">
+            <h2 class="cartao__titulo">O que entra nas contas</h2>
+          </div>
+          <div class="cartao__corpo pilha">
+            <div class="grelha grelha--3">
+              <div class="estatistica">
+                <p class="estatistica__valor" id="stat-total-active">—</p>
+                <p class="estatistica__rotulo">Anúncios activos</p>
+              </div>
+              <div class="estatistica">
+                <p class="estatistica__valor" id="stat-sale-with-price">—</p>
+                <p class="estatistica__rotulo">Com preço de venda válido</p>
+                <p class="estatistica__nota">é sobre estes que são calculadas as medianas</p>
+              </div>
+              <div class="estatistica">
+                <p class="estatistica__valor" id="stat-with-area">—</p>
+                <p class="estatistica__rotulo">Com preço e área declarada</p>
+                <p class="estatistica__nota">usados no cálculo do preço por m²</p>
+              </div>
+            </div>
 
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.innerText = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('hide');
-                setTimeout(() => toast.remove(), 300);
-            }, 3500);
-        }
+            <div class="tabela-rolavel">
+              <table class="tabela tabela--compacta">
+                <tbody id="sample-breakdown-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
 
-        async function checkAuthStatus() {
-            try {
-                const res = await fetch('/api/auth/status');
-                const data = await res.json();
-                isAuthenticated = data.authenticated;
-                updateAuthUI();
-            } catch (e) {
-                console.error("Auth status error:", e);
-            }
-        }
+        <!-- Venda -->
+        <div class="pilha">
+          <h2>Venda</h2>
 
-        function updateAuthUI() {
-            const authContainer = document.getElementById('auth-container');
-            const lockedView = document.getElementById('admin-locked-view');
-            const unlockedView = document.getElementById('admin-unlocked-view');
-
-            if (isAuthenticated) {
-                authContainer.innerHTML = `
-                    <button class="btn-auth logged-in" onclick="switchTab('admin')">
-                        <span>👑 Administrador</span>
-                    </button>
-                `;
-                if (lockedView) lockedView.style.display = 'none';
-                if (unlockedView) {
-                    unlockedView.style.display = 'block';
-                    fetchHealth();
-                    setupWebSocket();
-                }
-            } else {
-                authContainer.innerHTML = `
-                    <button id="login-modal-btn" class="btn-auth" onclick="openLoginModal()">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        <span>Acesso Admin</span>
-                    </button>
-                `;
-                if (lockedView) lockedView.style.display = 'block';
-                if (unlockedView) unlockedView.style.display = 'none';
-            }
-        }
-
-        function openLoginModal() {
-            document.getElementById('login-modal').classList.add('active');
-            document.getElementById('login-user').focus();
-        }
-
-        function closeLoginModal() {
-            document.getElementById('login-modal').classList.remove('active');
-            document.getElementById('login-error').style.display = 'none';
-        }
-
-        function closeLoginModalOnOutside(e) {
-            if (e.target.id === 'login-modal') closeLoginModal();
-        }
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            const user = document.getElementById('login-user').value.trim();
-            const pass = document.getElementById('login-pass').value.trim();
-            const btn = document.getElementById('login-submit-btn');
-            const err = document.getElementById('login-error');
-
-            btn.disabled = true;
-            btn.innerText = 'A validar...';
-            err.style.display = 'none';
-
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, password: pass })
-                });
-                const data = await res.json();
-
-                if (res.ok && data.success) {
-                    isAuthenticated = true;
-                    closeLoginModal();
-                    updateAuthUI();
-                    showToast('Autenticado com sucesso como Administrador!', 'success');
-                } else {
-                    err.innerText = data.detail || 'Credenciais inválidas';
-                    err.style.display = 'block';
-                }
-            } catch (errExp) {
-                err.innerText = 'Erro ao ligar ao servidor';
-                err.style.display = 'block';
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Entrar';
-            }
-        }
-
-        async function logoutAdmin() {
-            try {
-                await fetch('/api/auth/logout', { method: 'POST' });
-                isAuthenticated = false;
-                updateAuthUI();
-                showToast('Sessão terminada.', 'info');
-                switchTab('catalog');
-            } catch (e) { console.error(e); }
-        }
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-            const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
-            if (targetBtn) targetBtn.classList.add('active');
-
-            const targetContent = document.getElementById(`tab-${tabId}`);
-            if (targetContent) targetContent.classList.add('active');
-
-            if (tabId === 'catalog') {
-                loadProperties(true);
-            } else if (tabId === 'analytics') {
-                fetchAnalytics();
-            } else if (tabId === 'deals') {
-                fetchDealsAndDrops();
-            } else if (tabId === 'admin') {
-                if (isAuthenticated) {
-                    fetchHealth();
-                    setupWebSocket();
-                }
-            }
-        }
-
-        async function loadFilterOptions() {
-            try {
-                const res = await fetch('/api/filters');
-                const data = await res.json();
-
-                const siteSelect = document.getElementById('filter-site');
-                siteSelect.innerHTML = '<option value="Todos">Todos os Portais</option>';
-                data.sites.forEach(s => {
-                    siteSelect.innerHTML += `<option value="${s.site}">${s.site} (${s.count})</option>`;
-                });
-
-                const parishSelect = document.getElementById('filter-parish');
-                parishSelect.innerHTML = '<option value="Todas">Todas as Freguesias</option>';
-                data.parishes.forEach(p => {
-                    parishSelect.innerHTML += `<option value="${p.parish}">${p.parish} (${p.count})</option>`;
-                });
-
-                const typoSelect = document.getElementById('filter-typology');
-                typoSelect.innerHTML = '<option value="Todos">Todas as Tipologias</option>';
-                data.typologies.forEach(t => {
-                    typoSelect.innerHTML += `<option value="${t.typology}">${t.typology} (${t.count})</option>`;
-                });
-            } catch (e) {
-                console.error("Failed to load filters:", e);
-            }
-        }
-
-        function resetFilters() {
-            document.getElementById('search-input').value = '';
-            document.getElementById('filter-site').value = 'Todos';
-            document.getElementById('filter-type').value = 'Todos';
-            document.getElementById('filter-typology').value = 'Todos';
-            document.getElementById('filter-parish').value = 'Todas';
-            document.getElementById('filter-min-price').value = '';
-            document.getElementById('filter-max-price').value = '';
-            document.getElementById('filter-status').value = 'active';
-            document.getElementById('filter-sort').value = 'newest';
-            loadProperties(true);
-        }
-
-        function filterByParishFromTable(parishName) {
-            document.getElementById('filter-parish').value = parishName;
-            switchTab('catalog');
-        }
-
-        function debounceSearch() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => loadProperties(true), 320);
-        }
-
-        async function loadProperties(reset = true) {
-            const container = document.getElementById('properties-container');
-            const countLabel = document.getElementById('catalog-count-label');
-            const loadMoreWrap = document.getElementById('load-more-wrap');
-
-            if (reset) {
-                currentOffset = 0;
-            }
-
-            const q = document.getElementById('search-input').value.trim();
-            const site = document.getElementById('filter-site').value;
-            const ptype = document.getElementById('filter-type').value;
-            const typo = document.getElementById('filter-typology').value;
-            const parish = document.getElementById('filter-parish').value;
-            const minPrice = document.getElementById('filter-min-price').value;
-            const maxPrice = document.getElementById('filter-max-price').value;
-            const statusFilter = document.getElementById('filter-status').value;
-            const sort = document.getElementById('filter-sort').value;
-
-            let url = `/api/properties?sort=${sort}&status_filter=${statusFilter}&offset=${currentOffset}&limit=${PAGE_LIMIT}`;
-            if (q) url += `&q=${encodeURIComponent(q)}`;
-            if (site !== 'Todos') url += `&site=${encodeURIComponent(site)}`;
-            if (ptype !== 'Todos') url += `&property_type=${encodeURIComponent(ptype)}`;
-            if (typo !== 'Todos') url += `&typology=${encodeURIComponent(typo)}`;
-            if (parish !== 'Todas') url += `&parish=${encodeURIComponent(parish)}`;
-            if (minPrice) url += `&min_price=${encodeURIComponent(minPrice)}`;
-            if (maxPrice) url += `&max_price=${encodeURIComponent(maxPrice)}`;
-
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                const props = data.items || [];
-                const total = data.total ?? props.length;
-
-                if (reset) {
-                    container.innerHTML = '';
-                }
-
-                countLabel.innerHTML = `<strong>${total.toLocaleString('pt-PT')}</strong> anúncios encontrados`;
-
-                if (props.length === 0 && reset) {
-                    container.innerHTML = `
-                        <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--glass-border);">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
-                            <h3 style="color: var(--text-primary); margin-bottom: 0.25rem;">Nenhum imóvel encontrado</h3>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Tenta ajustar os termos de pesquisa ou limpar os filtros ativos.</p>
-                        </div>
-                    `;
-                    loadMoreWrap.style.display = 'none';
-                    return;
-                }
-
-                props.forEach(p => {
-                    let badges = [];
-                    if (p.is_new) {
-                        badges.push(`<span class="badge-new">NOVO</span>`);
-                    }
-                    if (p.opportunity_score >= 78) {
-                        badges.push(`<span class="badge-deal">🔥 Score ${p.opportunity_score}</span>`);
-                    } else if (p.opportunity_score >= 65) {
-                        badges.push(`<span class="badge-good">⭐ Score ${p.opportunity_score}</span>`);
-                    }
-
-                    let tags = [];
-                    if (p.typology) tags.push(`<span class="feature-tag">${p.typology}</span>`);
-                    if (p.area_m2) tags.push(`<span class="feature-tag">${p.area_m2} m²</span>`);
-                    if (p.price_per_m2) tags.push(`<span class="feature-tag">${Math.round(p.price_per_m2).toLocaleString('pt-PT')} €/m²</span>`);
-                    if (p.has_garage) tags.push(`<span class="feature-tag">Garagem</span>`);
-                    if (p.condition && p.condition !== 'Usado') tags.push(`<span class="feature-tag">${p.condition}</span>`);
-
-                    const safeId = p.id.replace(/'/g, "\\'");
-
-                    container.innerHTML += `
-                        <div class="prop-card" onclick="openPropertyDetail('${safeId}')">
-                            ${p.image_url ? `<img class="prop-image" src="${p.image_url}" alt="" loading="lazy" onerror="this.style.display='none';">` : '<div class="prop-image-placeholder"></div>'}
-                            <div class="prop-card-content">
-                                <div>
-                                    <div style="display:flex; justify-content:space-between; align-items:center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap;">
-                                        <span class="prop-site">${p.site.toUpperCase()} &bull; ${p.parish || 'Barcelos'}</span>
-                                        <div style="display:flex; gap:4px;">${badges.join('')}</div>
-                                    </div>
-                                    <span class="prop-title" title="${p.title}">${p.title}</span>
-                                    <div class="prop-tags-row">
-                                        ${tags.join('')}
-                                    </div>
-                                </div>
-                                <div class="prop-footer">
-                                    <div>
-                                        <span class="prop-price">${p.price}</span>
-                                        <div class="prop-age">visto ${p.age_label || 'recentemente'}</div>
-                                    </div>
-                                    <a href="${p.url}" target="_blank" rel="noopener" class="prop-link-icon" onclick="event.stopPropagation();" title="Abrir diretamente no portal">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                currentOffset += props.length;
-                if (currentOffset < total) {
-                    loadMoreWrap.style.display = 'flex';
-                    document.getElementById('load-more-btn').innerText = `Carregar mais (${currentOffset} de ${total})`;
-                } else {
-                    loadMoreWrap.style.display = 'none';
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        function renderPositioningSVG(dist, unitSuffix) {
-            if (!dist) {
-                return `<p style="font-size: 0.82rem; color: var(--text-secondary);">Dados insuficientes nesta categoria para desenhar a distribuição.</p>`;
-            }
-            const dotsSvg = (dist.dots || []).map(x => `<circle class="pos-dot" cx="${x}" cy="22" r="2.5"></circle>`).join('');
-            const target = dist.target;
-            let targetSvg = '';
-            let summaryHtml = '';
-
-            if (target) {
-                targetSvg = `
-                    <line class="pos-target-line" x1="${target.x}" y1="4" x2="${target.x}" y2="40"></line>
-                    <circle class="pos-target-dot" cx="${target.x}" cy="22" r="5"></circle>
-                `;
-                const sign = target.diff > 0 ? '+' : '';
-                const badgeClass = target.tone === 'success' ? 'badge-deal' : (target.tone === 'warning' ? 'badge-drop' : 'badge-neutral');
-                summaryHtml = `
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <span style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: #38bdf8;">${target.value.toLocaleString('pt-PT')} ${unitSuffix}</span>
-                        <span class="${badgeClass}">${target.label}</span>
-                    </div>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary);">
-                        Mediana dos comparáveis: <strong style="color: var(--text-primary);">${dist.median.toLocaleString('pt-PT')} ${unitSuffix}</strong>
-                        &mdash; este anúncio está <span class="${badgeClass}">${sign}${target.diff.toLocaleString('pt-PT')} ${unitSuffix} (${sign}${target.diff_pct}%)</span>
-                    </p>
-                `;
-            }
-
-            const rankText = target
-                ? `<p style="font-size: 0.78rem; color: var(--text-secondary);">Mais caro do que <strong>${target.percentile_rank}%</strong> dos comparáveis (mín. ${dist.min.toLocaleString('pt-PT')} ${unitSuffix}, máx. ${dist.max.toLocaleString('pt-PT')} ${unitSuffix}).</p>`
-                : '';
-
-            return `
-                ${summaryHtml}
-                <svg class="posicionamento" viewBox="0 0 320 44" role="img">
-                    <line class="pos-axis" x1="12" y1="22" x2="308" y2="22"></line>
-                    <rect class="pos-range" x="${dist.x_p10}" y="15" width="${Math.max(4, dist.x_p90 - dist.x_p10)}" height="14" rx="3"></rect>
-                    <rect class="pos-iqr" x="${dist.x_p25}" y="15" width="${Math.max(4, dist.x_p75 - dist.x_p25)}" height="14" rx="3"></rect>
-                    <line class="pos-median" x1="${dist.x_median}" y1="10" x2="${dist.x_median}" y2="34"></line>
-                    ${dotsSvg}
-                    ${targetSvg}
-                </svg>
-                <div class="pos-legend">
-                    <span>p10: ${dist.p10.toLocaleString('pt-PT')} ${unitSuffix}</span>
-                    <span>mediana: ${dist.median.toLocaleString('pt-PT')} ${unitSuffix}</span>
-                    <span>p90: ${dist.p90.toLocaleString('pt-PT')} ${unitSuffix}</span>
+          <article class="cartao">
+            <div class="cartao__corpo">
+              <div class="grelha grelha--3">
+                <div class="estatistica">
+                  <p class="estatistica__valor" id="kpi-avg-m2">—</p>
+                  <p class="estatistica__rotulo">Preço mediano por m²</p>
+                  <p class="estatistica__nota" id="kpi-m2-subtext"></p>
                 </div>
-                ${rankText}
-            `;
-        }
+                <div class="estatistica">
+                  <p class="estatistica__valor" id="kpi-median-price">—</p>
+                  <p class="estatistica__rotulo">Preço mediano</p>
+                  <p class="estatistica__nota" id="kpi-iqr-subtext"></p>
+                </div>
+                <div class="estatistica">
+                  <p class="estatistica__valor" id="kpi-median-area">—</p>
+                  <p class="estatistica__rotulo">Área mediana</p>
+                  <p class="estatistica__nota">útil ou bruta, a que o portal deu</p>
+                </div>
+              </div>
+            </div>
+          </article>
 
-        async function openPropertyDetail(propId) {
-            const modal = document.getElementById('detail-modal');
-            const body = document.getElementById('detail-modal-body');
-            modal.classList.add('active');
-            body.innerHTML = `<p style="color: var(--text-secondary); padding: 2rem 0; text-align:center;">A calcular posicionamento estatístico do imóvel...</p>`;
+          <div class="grelha grelha--2">
+            <article class="cartao">
+              <div class="cartao__cabecalho">
+                <h2 class="cartao__titulo">Por tipologia</h2>
+              </div>
+              <div class="cartao__corpo pilha">
+                <p class="texto-suave texto-pequeno">Quanto mais pequena a casa, mais cara sai por metro quadrado — é o padrão normal de qualquer mercado.</p>
+                <div class="tabela-rolavel">
+                  <table class="tabela tabela--compacta">
+                    <thead>
+                      <tr>
+                        <th>Tipologia</th>
+                        <th class="numero">€/m²</th>
+                        <th></th>
+                        <th class="numero">Preço mediano</th>
+                        <th class="numero">Imóveis</th>
+                      </tr>
+                    </thead>
+                    <tbody id="table-by-typology"></tbody>
+                  </table>
+                </div>
+                <p class="texto-suave texto-pequeno">A barra é desenhada nas tipologias com 20 imóveis ou mais.</p>
+              </div>
+            </article>
 
-            try {
-                const res = await fetch(`/api/property/${encodeURIComponent(propId)}`);
-                if (!res.ok) throw new Error('Falha ao carregar imóvel');
-                const d = await res.json();
+            <article class="cartao">
+              <div class="cartao__cabecalho">
+                <h2 class="cartao__titulo">Por tipo</h2>
+              </div>
+              <div class="cartao__corpo pilha">
+                <p class="texto-suave texto-pequeno">Um apartamento e uma moradia não se comparam pelo preço total: comparam-se aqui.</p>
+                <div class="tabela-rolavel">
+                  <table class="tabela tabela--compacta">
+                    <thead>
+                      <tr>
+                        <th>Tipo</th>
+                        <th class="numero">€/m²</th>
+                        <th></th>
+                        <th class="numero">Preço mediano</th>
+                        <th class="numero">Imóveis</th>
+                      </tr>
+                    </thead>
+                    <tbody id="table-by-type"></tbody>
+                  </table>
+                </div>
+              </div>
+            </article>
+          </div>
 
-                const comp = d.comparables || {};
-                const priceBoxHtml = renderPositioningSVG(comp.price_distribution, '€');
-                const m2BoxHtml = d.price_per_m2 && comp.m2_distribution
-                    ? renderPositioningSVG(comp.m2_distribution, '€/m²')
-                    : `<p style="font-size: 0.85rem; color: var(--text-secondary);">Este anúncio não declara área útil/bruta suficiente para comparar o preço por m².</p>`;
-
-                let historyHtml = '';
-                if (d.price_history && d.price_history.length > 0) {
-                    historyHtml = d.price_history.map(h => `
-                        <div class="site-item">
-                            <span style="font-size: 0.82rem; color: var(--text-secondary);">${h.detected_at}</span>
-                            <span style="font-family: var(--font-mono); font-size: 0.85rem;">
-                                <del style="color: var(--text-secondary); margin-right:6px;">${h.old_price}</del>
-                                <strong style="color: ${h.change_amount < 0 ? '#34d399' : '#fb7185'};">${h.new_price} (${h.change_pct}%)</strong>
-                            </span>
-                        </div>
-                    `).join('');
-                } else {
-                    historyHtml = `<p style="font-size: 0.84rem; color: var(--text-secondary);">Sem alterações de preço desde a primeira recolha (${d.found_at_str}).</p>`;
-                }
-
-                let similarHtml = '';
-                if (d.similar_listings && d.similar_listings.length > 0) {
-                    similarHtml = `
-                        <div style="margin-top: 1.25rem;">
-                            <h4 style="font-size: 0.95rem; margin-bottom: 0.6rem; color: var(--text-primary);">🔗 Outros anúncios semelhantes na mesma freguesia (±3% preço)</h4>
-                            <div class="deals-vertical-list">
-                                ${d.similar_listings.map(s => `
-                                    <a href="${s.url}" target="_blank" rel="noopener" class="drop-row" style="padding: 0.65rem 0.95rem;">
-                                        <div>
-                                            <span style="font-weight: 600; font-size: 0.88rem;">${s.title}</span>
-                                            <span style="display:block; font-size: 0.76rem; color: var(--text-secondary);">${s.site.toUpperCase()} &bull; Descoberto em ${s.found_at}</span>
-                                        </div>
-                                        <span style="font-family: var(--font-mono); font-weight: 700; color: #38bdf8;">${s.price}</span>
-                                    </a>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                body.innerHTML = `
-                    <div class="detail-hero">
-                        ${d.image_url ? `<img class="detail-hero-img" src="${d.image_url}" alt="">` : `<div class="detail-hero-img" style="display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">Sem fotografia</div>`}
-                        <div>
-                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom: 0.5rem;">
-                                <span class="badge-neutral">${d.site.toUpperCase()}</span>
-                                <span class="badge-deal">Score ${d.opportunity_score}/100</span>
-                                <span class="badge-neutral">${d.is_active ? 'Ativo' : 'Removido'}</span>
-                            </div>
-                            <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem;">${d.title}</h2>
-                            <div style="font-family: var(--font-mono); font-size: 1.65rem; font-weight: 800; color: #38bdf8; margin-bottom: 0.5rem;">
-                                ${d.price}
-                            </div>
-
-                            <div class="detail-facts-grid">
-                                <div class="fact-box"><span class="fact-label">Tipologia</span><span class="fact-val">${d.typology}</span></div>
-                                <div class="fact-box"><span class="fact-label">Freguesia</span><span class="fact-val">${d.parish}</span></div>
-                                <div class="fact-box"><span class="fact-label">Área</span><span class="fact-val">${d.area_m2 ? d.area_m2 + ' m²' : 'N/D'}</span></div>
-                                <div class="fact-box"><span class="fact-label">Preço / m²</span><span class="fact-val">${d.price_per_m2 ? d.price_per_m2.toLocaleString('pt-PT') + ' €' : 'N/D'}</span></div>
-                                <div class="fact-box"><span class="fact-label">Estado</span><span class="fact-val">${d.condition}</span></div>
-                                <div class="fact-box"><span class="fact-label">1.ª vez visto</span><span class="fact-val">${d.found_age}</span></div>
-                            </div>
-
-                            <div style="display:flex; gap: 0.75rem; margin-top: 1rem;">
-                                <a href="${d.url}" target="_blank" rel="noopener" class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-                                    <span>Abrir no Portal (${d.site})</span>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem;">📐 Como se compara no mercado de Barcelos</h3>
-                        <p style="font-size: 0.83rem; color: var(--text-secondary);">
-                            Comparado contra <strong>${comp.sample_count || 0} imóveis ativos</strong> da tipologia <strong>${comp.typology}</strong> em Barcelos. Mediana e percentis (p10 – p90).
-                        </p>
-
-                        <div class="compare-grid">
-                            <div class="compare-box">
-                                <h4 style="font-size: 0.95rem; font-weight: 700;">Preço Total</h4>
-                                ${priceBoxHtml}
-                            </div>
-                            <div class="compare-box">
-                                <h4 style="font-size: 0.95rem; font-weight: 700;">Preço por m²</h4>
-                                ${m2BoxHtml}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--glass-border);">
-                        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.6rem;">📉 Histórico de Preços & Verificação</h4>
-                        <div class="sites-list">${historyHtml}</div>
-                        <p style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.6rem;">
-                            Descoberto em ${d.found_at_str} (${d.found_age}) &bull; Última verificação ${d.last_seen_age}.
-                        </p>
-                    </div>
-
-                    ${similarHtml}
-                `;
-            } catch (e) {
-                console.error(e);
-                body.innerHTML = `<p style="color: var(--danger);">Erro ao carregar os detalhes do imóvel.</p>`;
-            }
-        }
-
-        function closeDetailModal() {
-            document.getElementById('detail-modal').classList.remove('active');
-        }
-
-        function closeDetailModalOnOutside(e) {
-            if (e.target.id === 'detail-modal') closeDetailModal();
-        }
-
-        async function fetchAnalytics() {
-            try {
-                const res = await fetch('/api/analytics/full');
-                const data = await res.json();
-                const kpis = data.kpis;
-                const sample = data.sample;
-
-                document.getElementById('kpi-median-price').innerText = fmtEuro(kpis.median_price);
-                document.getElementById('kpi-iqr-subtext').innerText = `Metade entre ${fmtEuro(kpis.p25_price)} e ${fmtEuro(kpis.p75_price)}`;
-                document.getElementById('kpi-avg-price').innerText = fmtEuro(kpis.avg_price);
-                document.getElementById('kpi-sale-count-subtext').innerText = `n = ${sample.sale_with_price.toLocaleString('pt-PT')} imóveis com preço`;
-                document.getElementById('kpi-avg-m2').innerText = kpis.median_m2 ? `${kpis.median_m2.toLocaleString('pt-PT')} €/m²` : 'N/D';
-                document.getElementById('kpi-m2-subtext').innerText = `n = ${kpis.n_m2} com área (média: ${kpis.avg_m2.toLocaleString('pt-PT')} €/m²)`;
-                document.getElementById('kpi-drops').innerText = kpis.total_price_drops;
-                document.getElementById('kpi-deals').innerText = kpis.total_deals;
-
-                // Sample Breakdown Table
-                document.getElementById('sample-breakdown-tbody').innerHTML = `
-                    <tr><td><strong>Anúncios ativos na base de dados</strong></td><td class="num"><strong>${sample.total_active.toLocaleString('pt-PT')}</strong></td></tr>
-                    <tr><td>Anúncios de venda com preço numérico válido (> 2.500 €)</td><td class="num">${sample.sale_with_price.toLocaleString('pt-PT')}</td></tr>
-                    <tr><td>Anúncios com área útil/bruta extraída (usados no cálculo de €/m²)</td><td class="num">${sample.with_area.toLocaleString('pt-PT')}</td></tr>
-                    <tr><td>Anúncios sob consulta / sem preço divulgado</td><td class="num">${sample.no_price.toLocaleString('pt-PT')}</td></tr>
-                    <tr><td>Arrendamentos ou valores simbólicos (≤ 2.500 €) excluídos das medianas de venda</td><td class="num">${sample.rent_or_low.toLocaleString('pt-PT')}</td></tr>
-                `;
-
-                // Table By Typology
-                const typoTbody = document.getElementById('table-by-typology');
-                typoTbody.innerHTML = data.by_typology.map(t => `
-                    <tr class="${t.is_robust ? '' : 'fine-sample'}">
-                        <td><strong>${t.typology}</strong></td>
-                        <td class="num">${fmtEuro(t.median_price)}</td>
-                        <td class="bar-cell">
-                            ${t.is_robust
-                                ? `<div class="bar-track"><div class="bar-fill" style="width:${t.bar_pct}%"></div></div>`
-                                : `<span style="font-size:0.74rem; color:var(--text-secondary);">amostra fina</span>`}
-                        </td>
-                        <td class="num">${t.median_m2 ? t.median_m2.toLocaleString('pt-PT') + ' €/m²' : '—'}</td>
-                        <td class="num">${t.count}</td>
-                    </tr>
-                `).join('');
-
-                // Table By Property Type
-                const typeTbody = document.getElementById('table-by-type');
-                typeTbody.innerHTML = data.by_type.map(t => `
+          <article class="cartao">
+            <div class="cartao__cabecalho">
+              <h2 class="cartao__titulo">Por freguesia</h2>
+            </div>
+            <div class="cartao__corpo pilha">
+              <p class="texto-suave texto-pequeno">Clica em qualquer freguesia para abrir os respectivos anúncios no catálogo.</p>
+              <div class="tabela-rolavel">
+                <table class="tabela tabela--compacta">
+                  <thead>
                     <tr>
-                        <td><strong>${t.type}</strong></td>
-                        <td class="num">${fmtEuro(t.median_price)}</td>
-                        <td class="bar-cell"><div class="bar-track"><div class="bar-fill emerald" style="width:${t.bar_pct}%"></div></div></td>
-                        <td class="num">${t.median_m2 ? t.median_m2.toLocaleString('pt-PT') + ' €/m²' : '—'}</td>
-                        <td class="num">${t.count}</td>
+                      <th>Freguesia</th>
+                      <th class="numero">Preço mediano</th>
+                      <th></th>
+                      <th class="numero">Preço médio</th>
+                      <th class="numero">Mín – Máx</th>
+                      <th class="numero">Imóveis</th>
                     </tr>
-                `).join('');
+                  </thead>
+                  <tbody id="table-by-parish"></tbody>
+                </table>
+              </div>
+              <p class="texto-suave texto-pequeno">As freguesias com pelo menos 15 imóveis aparecem primeiro com barra proporcional; abaixo disso figuram como amostra fina.</p>
+            </div>
+          </article>
 
-                // Age Brackets
-                const ageContainer = document.getElementById('age-brackets-container');
-                ageContainer.innerHTML = data.age_brackets.map(b => `
-                    <div class="bracket-item">
-                        <div class="bracket-header">
-                            <span>${b.label}</span>
-                            <span class="mono">${b.count} imóveis &bull; ${b.pct}%</span>
-                        </div>
-                        <div class="bar-track"><div class="bar-fill" style="width:${b.bar_pct}%"></div></div>
-                    </div>
-                `).join('');
+          <div class="grelha grelha--2">
+            <article class="cartao">
+              <div class="cartao__cabecalho">
+                <h2 class="cartao__titulo">Onde está o stock</h2>
+              </div>
+              <div class="cartao__corpo pilha">
+                <p class="texto-suave texto-pequeno">Quantos imóveis há em cada escalão de preço. É uma contagem directa sobre o stock activo.</p>
+                <div class="pilha" id="price-brackets-container"></div>
+              </div>
+            </article>
 
-                // Price Brackets ("Onde está o stock")
-                const priceBracketsContainer = document.getElementById('price-brackets-container');
-                priceBracketsContainer.innerHTML = data.price_brackets.map(b => `
-                    <div class="bracket-item">
-                        <div class="bracket-header">
-                            <span>${b.label}</span>
-                            <span class="mono">${b.count} imóveis &bull; ${b.pct}%</span>
-                        </div>
-                        <div class="bar-track"><div class="bar-fill emerald" style="width:${b.bar_pct}%"></div></div>
-                    </div>
-                `).join('');
+            <article class="cartao">
+              <div class="cartao__cabecalho">
+                <h2 class="cartao__titulo">Por portal</h2>
+              </div>
+              <div class="cartao__corpo pilha">
+                <p class="texto-suave texto-pequeno">Distribuição dos anúncios activos e preço mediano pedido em cada portal monitorizado.</p>
+                <div class="tabela-rolavel">
+                  <table class="tabela tabela--compacta">
+                    <thead>
+                      <tr>
+                        <th>Portal</th>
+                        <th class="numero">Quota</th>
+                        <th></th>
+                        <th class="numero">Preço mediano</th>
+                        <th class="numero">Anúncios</th>
+                      </tr>
+                    </thead>
+                    <tbody id="table-by-site"></tbody>
+                  </table>
+                </div>
+              </div>
+            </article>
+          </div>
 
-                // Table By Portal
-                const siteTbody = document.getElementById('table-by-site');
-                siteTbody.innerHTML = data.by_site.map(s => `
-                    <tr>
-                        <td><strong>${s.site}</strong></td>
-                        <td class="num">${s.share_pct}%</td>
-                        <td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:${s.bar_pct}%"></div></div></td>
-                        <td class="num">${s.median_price ? fmtEuro(s.median_price) : '—'}</td>
-                        <td class="num">${s.count}</td>
-                    </tr>
-                `).join('');
+          <article class="cartao">
+            <div class="cartao__cabecalho">
+              <h2 class="cartao__titulo">Há quanto tempo estão monitorizados</h2>
+            </div>
+            <div class="cartao__corpo pilha">
+              <p class="texto-suave texto-pequeno">Contado desde a primeira vez que o anúncio foi recolhido pelo robô, sobre os imóveis que continuam activos.</p>
+              <div class="grelha grelha--3">
+                <div class="estatistica">
+                  <p class="estatistica__valor" id="kpi-age-median">—</p>
+                  <p class="estatistica__rotulo">Tempo mediano em carteira</p>
+                  <p class="estatistica__nota" id="kpi-age-iqr"></p>
+                </div>
+                <div class="estatistica">
+                  <p class="estatistica__valor" id="kpi-drops">—</p>
+                  <p class="estatistica__rotulo">Descidas de preço registadas</p>
+                </div>
+                <div class="estatistica">
+                  <p class="estatistica__valor" id="kpi-deals">—</p>
+                  <p class="estatistica__rotulo">Abaixo da mediana da freguesia</p>
+                </div>
+              </div>
+              <div class="pilha" id="age-brackets-container"></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
 
-                // Full Parish Table
-                const parishTbody = document.getElementById('table-by-parish');
-                parishTbody.innerHTML = data.by_parish.map(p => `
-                    <tr class="${p.is_robust ? '' : 'fine-sample'}" style="cursor:pointer;" onclick="filterByParishFromTable('${p.parish.replace(/'/g, "\\'")}')" title="Clicar para ver anúncios em ${p.parish}">
-                        <td><strong>${p.parish}</strong></td>
-                        <td class="num">${fmtEuro(p.median_price)}</td>
-                        <td class="bar-cell">
-                            ${p.is_robust
-                                ? `<div class="bar-track"><div class="bar-fill emerald" style="width:${p.bar_pct}%"></div></div>`
-                                : `<span style="font-size:0.74rem; color:var(--text-secondary);">amostra fina</span>`}
-                        </td>
-                        <td class="num">${fmtEuro(p.avg_price)}</td>
-                        <td class="num">${fmtEuro(p.min_price)} – ${fmtEuro(p.max_price)}</td>
-                        <td class="num">${p.count}</td>
-                    </tr>
-                `).join('');
+    <!-- VISTA 4: OPORTUNIDADES & DESCIDAS -->
+    <div id="tab-deals" class="vista">
+      <div class="pilha">
+        <h1>Oportunidades &amp; Descidas de Preço</h1>
 
-                // Render Charts
-                const ctxTypo = document.getElementById('typologyChart').getContext('2d');
-                if (typoChartInstance) typoChartInstance.destroy();
-                typoChartInstance = new Chart(ctxTypo, {
-                    type: 'bar',
-                    data: {
-                        labels: data.by_typology.map(t => `${t.typology} (${t.count})`),
-                        datasets: [
-                            {
-                                label: 'Preço Mediano (€)',
-                                data: data.by_typology.map(t => t.median_price),
-                                backgroundColor: 'rgba(99, 102, 241, 0.78)',
-                                borderColor: '#6366f1',
-                                borderWidth: 1,
-                                borderRadius: 6
-                            },
-                            {
-                                label: 'Preço Médio (€)',
-                                data: data.by_typology.map(t => t.avg_price),
-                                backgroundColor: 'rgba(6, 182, 212, 0.5)',
-                                borderColor: '#06b6d4',
-                                borderWidth: 1,
-                                borderRadius: 6
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { labels: { color: '#94a3b8' } } },
-                        scales: {
-                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                        }
-                    }
-                });
+        <div class="grelha grelha--2">
+          <article class="cartao">
+            <div class="cartao__cabecalho cartao__cabecalho--empilhado">
+              <h2 class="cartao__titulo">Imóveis abaixo da mediana</h2>
+              <p class="texto-suave texto-pequeno">Anúncios com preço significativamente inferior à mediana da mesma tipologia e freguesia.</p>
+            </div>
+            <div class="cartao__corpo" id="deals-list">
+              <p class="texto-suave">A carregar...</p>
+            </div>
+          </article>
 
-                const topParishes = data.by_parish.slice(0, 10);
-                const ctxParish = document.getElementById('parishChart').getContext('2d');
-                if (parishChartInstance) parishChartInstance.destroy();
-                parishChartInstance = new Chart(ctxParish, {
-                    type: 'bar',
-                    data: {
-                        labels: topParishes.map(p => `${p.parish} (${p.count})`),
-                        datasets: [{
-                            label: 'Preço Mediano (€)',
-                            data: topParishes.map(p => p.median_price),
-                            backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                            borderColor: '#10b981',
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                            y: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                        }
-                    }
-                });
+          <article class="cartao">
+            <div class="cartao__cabecalho cartao__cabecalho--empilhado">
+              <h2 class="cartao__titulo">Histórico de descidas de preço</h2>
+              <p class="texto-suave texto-pequeno">Anúncios activos que baixaram de preço após a primeira recolha.</p>
+            </div>
+            <div class="cartao__corpo" id="drops-list">
+              <p class="texto-suave">A carregar...</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
 
-            } catch (e) { console.error(e); }
+    <!-- VISTA 5: SISTEMA & LOGS -->
+    <div id="tab-admin" class="vista">
+      <div class="pilha">
+        <h1>Sistema</h1>
+
+        <div id="admin-locked-view" class="cartao" style="display: none;">
+          <div class="cartao__corpo pilha" style="align-items: flex-start;">
+            <h2>Autenticação necessária</h2>
+            <p class="texto-suave texto-legivel">O diagnóstico dos portais, os logs em directo e o disparo manual do robô requerem sessão de administrador.</p>
+            <button type="button" class="botao botao--primario" onclick="openLoginModal()">Entrar como administrador</button>
+          </div>
+        </div>
+
+        <div id="admin-unlocked-view" class="pilha" style="display: none;">
+          <div class="cartao">
+            <div class="cartao__corpo" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div>
+                <strong>Sessão de administrador activa</strong>
+                <p class="texto-suave texto-pequeno">Controlo do motor de pesquisa e actualização de indicadores.</p>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" id="trigger-scan-btn" class="botao botao--primario" onclick="triggerManualScan()">Varrer agora</button>
+                <button type="button" class="botao" onclick="triggerBackfill()">Recalcular indicadores</button>
+                <button type="button" class="botao botao--perigo" onclick="logoutAdmin()">Terminar sessão</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grelha grelha--2">
+            <article class="cartao">
+              <div class="cartao__cabecalho">
+                <h2 class="cartao__titulo">Estado dos portais (última ronda)</h2>
+              </div>
+              <div class="cartao__corpo">
+                <div class="tabela-rolavel">
+                  <table class="tabela tabela--compacta">
+                    <thead>
+                      <tr>
+                        <th>Portal</th>
+                        <th>Estado</th>
+                        <th class="numero">Anúncios</th>
+                        <th class="numero">Duração</th>
+                      </tr>
+                    </thead>
+                    <tbody id="health-list">
+                      <tr><td colspan="4" class="texto-suave">A carregar...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </article>
+
+            <article class="cartao">
+              <div class="cartao__cabecalho">
+                <h2 class="cartao__titulo">Logs do robô</h2>
+                <span class="etiqueta etiqueta--neutro">em directo</span>
+              </div>
+              <div class="cartao__corpo">
+                <div class="log-terminal" id="log-terminal">
+                  <div class="log-linha">A ligar ao registo do scraper...</div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="rodape">
+    <div class="contentor">
+      imobot &middot; Barcelos
+    </div>
+  </footer>
+
+  <!-- Modal de Autenticação -->
+  <div id="login-modal" class="modal-fundo" onclick="closeLoginModalOnOutside(event)">
+    <div class="modal-caixa">
+      <form id="login-form" class="pilha" onsubmit="handleLogin(event)">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2>Entrar</h2>
+          <button type="button" class="botao botao--pequeno" onclick="closeLoginModal()">Fechar</button>
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="login-user">Utilizador</label>
+          <input class="campo__entrada" type="text" id="login-user" required autocomplete="username">
+        </div>
+        <div class="campo">
+          <label class="campo__rotulo" for="login-pass">Palavra-passe</label>
+          <input class="campo__entrada" type="password" id="login-pass" required autocomplete="current-password">
+        </div>
+        <div id="login-error" class="aviso aviso--erro" style="display: none;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="botao" onclick="closeLoginModal()">Cancelar</button>
+          <button type="submit" class="botao botao--primario" id="login-submit-btn">Entrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" class="notificacoes"></div>
+
+  <script>
+    let searchTimeout = null;
+    let isAuthenticated = false;
+    let currentOffset = 0;
+    let lastActiveTab = 'catalog';
+    const PAGE_LIMIT = 40;
+
+    function initTheme() {
+      const saved = localStorage.getItem('imobot_theme');
+      if (saved === 'light' || saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', saved);
+      }
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      let next = 'dark';
+      if (current === 'dark' || (!current && prefersDark)) {
+        next = 'light';
+      }
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('imobot_theme', next);
+    }
+
+    function fmtEuro(val) {
+      if (!val && val !== 0) return '—';
+      return `${Number(val).toLocaleString('pt-PT')} €`;
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'notificacao';
+      el.innerText = message;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+
+    async function checkAuthStatus() {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        isAuthenticated = data.authenticated;
+        updateAuthUI();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function updateAuthUI() {
+      const authContainer = document.getElementById('auth-container');
+      const lockedView = document.getElementById('admin-locked-view');
+      const unlockedView = document.getElementById('admin-unlocked-view');
+
+      if (isAuthenticated) {
+        authContainer.innerHTML = `<button type="button" class="etiqueta etiqueta--acento" style="border:none;cursor:pointer;padding:6px 12px;" onclick="switchTab('admin')">Admin</button>`;
+        if (lockedView) lockedView.style.display = 'none';
+        if (unlockedView) {
+          unlockedView.style.display = 'flex';
+          fetchHealth();
+          setupWebSocket();
         }
+      } else {
+        authContainer.innerHTML = `<button type="button" class="entrar" onclick="openLoginModal()">Entrar</button>`;
+        if (lockedView) lockedView.style.display = 'block';
+        if (unlockedView) unlockedView.style.display = 'none';
+      }
+    }
 
-        async function fetchDealsAndDrops() {
-            try {
-                const [dealsRes, dropsRes] = await Promise.all([
-                    fetch('/api/analytics/deals'),
-                    fetch('/api/analytics/price-drops')
-                ]);
+    function openLoginModal() {
+      document.getElementById('login-modal').classList.add('activo');
+      document.getElementById('login-user').focus();
+    }
 
-                const deals = await dealsRes.json();
-                const drops = await dropsRes.json();
+    function closeLoginModal() {
+      document.getElementById('login-modal').classList.remove('activo');
+      document.getElementById('login-error').style.display = 'none';
+    }
 
-                const dealsList = document.getElementById('deals-list');
-                dealsList.innerHTML = '';
-                if (deals.length === 0) {
-                    dealsList.innerHTML = '<div class="site-item"><span class="site-name">Sem oportunidades registadas de momento.</span></div>';
-                } else {
-                    deals.forEach(d => {
-                        const safeId = d.id.replace(/'/g, "\\'");
-                        dealsList.innerHTML += `
-                            <div class="drop-row" style="cursor:pointer;" onclick="openPropertyDetail('${safeId}')">
-                                <div style="display:flex; flex-direction:column; gap:3px;">
-                                    <span style="font-weight:600; font-size:0.95rem; color:var(--text-primary);">${d.title}</span>
-                                    <span style="font-size:0.8rem; color:var(--text-secondary);">${d.site.toUpperCase()} &bull; ${d.parish} &bull; ${d.typology} ${d.area_m2 ? `&bull; ${d.area_m2}m²` : ''}</span>
-                                </div>
-                                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-                                    <span style="font-weight:700; color:var(--text-primary); font-size:1.1rem;">${d.price}</span>
-                                    <span class="badge-deal">🔥 Score ${d.score}/100</span>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
+    function closeLoginModalOnOutside(e) {
+      if (e.target.id === 'login-modal') closeLoginModal();
+    }
 
-                const dropsList = document.getElementById('drops-list');
-                dropsList.innerHTML = '';
-                if (drops.length === 0) {
-                    dropsList.innerHTML = '<div class="site-item"><span class="site-name">Sem descidas de preço registadas recentemente.</span></div>';
-                } else {
-                    drops.forEach(dr => {
-                        const safeId = (dr.property_id || '').replace(/'/g, "\\'");
-                        dropsList.innerHTML += `
-                            <div class="drop-row" style="cursor:pointer;" onclick="openPropertyDetail('${safeId}')">
-                                <div style="display:flex; flex-direction:column; gap:3px;">
-                                    <span style="font-weight:600; font-size:0.95rem; color:var(--text-primary);">${dr.title}</span>
-                                    <span style="font-size:0.8rem; color:var(--text-secondary);">${dr.site.toUpperCase()} &bull; ${dr.parish || 'Barcelos'} &bull; Anterior: <del>${dr.old_price}</del></span>
-                                </div>
-                                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-                                    <span style="font-weight:700; color:#f87171; font-size:1.1rem;">${dr.new_price}</span>
-                                    <span class="badge-drop">${dr.change_amount.toLocaleString('pt-PT')} € (${dr.change_pct}%)</span>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
+    async function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('login-user').value.trim();
+      const pass = document.getElementById('login-pass').value.trim();
+      const btn = document.getElementById('login-submit-btn');
+      const err = document.getElementById('login-error');
 
-            } catch (e) { console.error(e); }
+      btn.disabled = true;
+      err.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          isAuthenticated = true;
+          closeLoginModal();
+          updateAuthUI();
+          showToast('Sessão iniciada.');
+        } else {
+          err.innerText = data.detail || 'Credenciais inválidas';
+          err.style.display = 'block';
         }
+      } catch (ex) {
+        err.innerText = 'Erro ao ligar ao servidor';
+        err.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
-        async function fetchHealth() {
-            if (!isAuthenticated) return;
-            try {
-                const res = await fetch('/api/health');
-                if (!res.ok) return;
-                const data = await res.json();
-                const healthList = document.getElementById('health-list');
-                healthList.innerHTML = '';
+    async function logoutAdmin() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      isAuthenticated = false;
+      updateAuthUI();
+      showToast('Sessão terminada.');
+      switchTab('catalog');
+    }
 
-                if (!data.latest_run) {
-                    healthList.innerHTML = '<div class="site-item"><span class="site-name">Nenhum ciclo registado.</span></div>';
-                    return;
-                }
+    function switchTab(tabId) {
+      if (tabId !== 'detail') {
+        lastActiveTab = tabId;
+      }
+      document.querySelectorAll('.navegacao__item').forEach(b => b.classList.remove('navegacao__item--activo'));
+      document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
 
-                data.site_health.forEach(log => {
-                    let statusColor = log.status === 'success' ? 'var(--success)' : (log.status === 'empty' ? 'var(--text-secondary)' : 'var(--danger)');
-                    let statusIcon = log.status === 'success' ? '✅' : (log.status === 'empty' ? '⚪' : '❌');
-                    healthList.innerHTML += `
-                        <div class="site-item" ${log.error ? `title="${log.error}"` : ''}>
-                            <span class="site-name" style="color: ${statusColor}; font-size: 0.9rem;">${statusIcon} ${log.site}</span>
-                            <span class="site-count" style="font-size: 0.75rem;">${log.found} obj. / ${log.duration}s</span>
-                        </div>
-                    `;
-                });
-            } catch (e) { console.error(e); }
-        }
+      const navBtn = document.getElementById(`nav-${tabId === 'detail' ? lastActiveTab : tabId}`);
+      if (navBtn) navBtn.classList.add('navegacao__item--activo');
 
-        async function triggerManualScan() {
-            const btn = document.getElementById('trigger-scan-btn');
-            btn.disabled = true;
-            btn.innerText = 'A solicitar...';
+      const target = document.getElementById(`tab-${tabId}`);
+      if (target) target.classList.add('activa');
 
-            try {
-                const res = await fetch('/api/trigger', { method: 'POST' });
-                const data = await res.json();
-                if (res.ok) {
-                    showToast(data.message || 'Varrimento solicitado com sucesso!', 'success');
-                } else {
-                    showToast(data.detail || 'Erro ao iniciar varrimento', 'error');
-                }
-            } catch (e) {
-                showToast('Erro de ligação ao servidor', 'error');
-            } finally {
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.innerText = '⚡ Varrer Agora';
-                }, 3000);
-            }
-        }
+      window.scrollTo({ top: 0, behavior: 'instant' });
 
-        async function triggerBackfill() {
-            try {
-                const res = await fetch('/api/admin/backfill', { method: 'POST' });
-                const data = await res.json();
-                showToast(data.message || 'Backfill iniciado!', 'success');
-            } catch (e) {
-                showToast('Erro ao iniciar backfill', 'error');
-            }
-        }
-
-        function setupWebSocket() {
-            if (!isAuthenticated) return;
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const socket = new WebSocket(`${protocol}//${window.location.host}/ws/logs`);
-            const terminal = document.getElementById('log-terminal');
-
-            socket.onmessage = (event) => {
-                const line = document.createElement('div');
-                line.className = 'log-line';
-                if (event.data.includes('[ERROR]') || event.data.includes('[FALHA]')) line.classList.add('error');
-                if (event.data.includes('[SUCESSO]') || event.data.includes('NOVA') || event.data.includes('Found')) line.classList.add('success');
-                if (event.data.includes('Starting') || event.data.includes('browser')) line.classList.add('system');
-
-                line.innerText = `> ${event.data}`;
-                terminal.appendChild(line);
-                terminal.scrollTop = terminal.scrollHeight;
-
-                if (terminal.children.length > 200) terminal.removeChild(terminal.firstChild);
-            };
-        }
-
-        // Initial Initialization
-        checkAuthStatus();
-        loadFilterOptions();
+      if (tabId === 'catalog') {
         loadProperties(true);
-    </script>
-</body>
+      } else if (tabId === 'analytics') {
+        fetchAnalytics();
+      } else if (tabId === 'deals') {
+        fetchDealsAndDrops();
+      } else if (tabId === 'admin' && isAuthenticated) {
+        fetchHealth();
+        setupWebSocket();
+      }
+    }
 
+    async function loadFilterOptions() {
+      try {
+        const res = await fetch('/api/filters');
+        const data = await res.json();
+
+        const siteSelect = document.getElementById('filter-site');
+        siteSelect.innerHTML = '<option value="Todos">Todos os portais</option>';
+        data.sites.forEach(s => {
+          siteSelect.innerHTML += `<option value="${s.site}">${s.site} (${s.count})</option>`;
+        });
+
+        const typoSelect = document.getElementById('filter-typology');
+        typoSelect.innerHTML = '<option value="Todos">Todas as tipologias</option>';
+        data.typologies.forEach(t => {
+          typoSelect.innerHTML += `<option value="${t.typology}">${t.typology} (${t.count})</option>`;
+        });
+
+        const parishSelect = document.getElementById('filter-parish');
+        parishSelect.innerHTML = '<option value="Todas">Todas as freguesias</option>';
+        data.parishes.forEach(p => {
+          parishSelect.innerHTML += `<option value="${p.parish}">${p.parish} (${p.count})</option>`;
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('filter-site').value = 'Todos';
+      document.getElementById('filter-type').value = 'Todos';
+      document.getElementById('filter-typology').value = 'Todos';
+      document.getElementById('filter-parish').value = 'Todas';
+      document.getElementById('filter-min-price').value = '';
+      document.getElementById('filter-max-price').value = '';
+      document.getElementById('filter-status').value = 'active';
+      document.getElementById('filter-sort').value = 'newest';
+      loadProperties(true);
+    }
+
+    function filterByParishFromTable(parishName) {
+      document.getElementById('filter-parish').value = parishName;
+      switchTab('catalog');
+    }
+
+    function debounceSearch() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => loadProperties(true), 300);
+    }
+
+    function renderAnuncioRow(p) {
+      const metaParts = [];
+      if (p.typology) metaParts.push(p.typology);
+      if (p.area_m2) metaParts.push(`${p.area_m2} m²`);
+      if (p.price_per_m2) metaParts.push(`${Math.round(p.price_per_m2).toLocaleString('pt-PT')} €/m²`);
+      if (p.parish) metaParts.push(p.parish);
+      if (p.site) metaParts.push(p.site);
+
+      const badges = [];
+      if (p.is_new) {
+        badges.push(`<span class="etiqueta etiqueta--acento">Novo</span>`);
+      }
+      if (p.opportunity_score >= 78) {
+        badges.push(`<span class="etiqueta etiqueta--sucesso">abaixo do mercado</span>`);
+      }
+      if (p.has_garage) {
+        badges.push(`<span class="etiqueta etiqueta--neutro">Garagem</span>`);
+      }
+
+      const safeId = (p.id || '').replace(/'/g, "\\'");
+      const imgHtml = p.image_url
+        ? `<img class="anuncio__imagem" src="${p.image_url}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'anuncio__imagem\\'>sem foto</div>'">`
+        : `<div class="anuncio__imagem">sem foto</div>`;
+
+      return `
+        <div class="anuncio">
+          ${imgHtml}
+          <div class="anuncio__corpo">
+            <a class="anuncio__titulo" onclick="openPropertyDetail('${safeId}')">${p.title || 'Anúncio sem título'}</a>
+            <p class="anuncio__meta">${metaParts.join(' · ')}</p>
+            <div class="anuncio__etiquetas">${badges.join('')}</div>
+          </div>
+          <div class="anuncio__preco">
+            ${p.price}
+            <p class="texto-suave texto-pequeno">visto ${p.age_label || 'recentemente'}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadProperties(reset = true) {
+      const container = document.getElementById('properties-container');
+      const countLabel = document.getElementById('catalog-count-label');
+      const loadMoreWrap = document.getElementById('load-more-wrap');
+
+      if (reset) currentOffset = 0;
+
+      const q = document.getElementById('search-input').value.trim();
+      const site = document.getElementById('filter-site').value;
+      const ptype = document.getElementById('filter-type').value;
+      const typo = document.getElementById('filter-typology').value;
+      const parish = document.getElementById('filter-parish').value;
+      const minPrice = document.getElementById('filter-min-price').value;
+      const maxPrice = document.getElementById('filter-max-price').value;
+      const statusFilter = document.getElementById('filter-status').value;
+      const sort = document.getElementById('filter-sort').value;
+
+      let url = `/api/properties?sort=${sort}&status_filter=${statusFilter}&offset=${currentOffset}&limit=${PAGE_LIMIT}`;
+      if (q) url += `&q=${encodeURIComponent(q)}`;
+      if (site !== 'Todos') url += `&site=${encodeURIComponent(site)}`;
+      if (ptype !== 'Todos') url += `&property_type=${encodeURIComponent(ptype)}`;
+      if (typo !== 'Todos') url += `&typology=${encodeURIComponent(typo)}`;
+      if (parish !== 'Todas') url += `&parish=${encodeURIComponent(parish)}`;
+      if (minPrice) url += `&min_price=${encodeURIComponent(minPrice)}`;
+      if (maxPrice) url += `&max_price=${encodeURIComponent(maxPrice)}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const props = Array.isArray(data) ? data : (data.items || []);
+        const total = data.total ?? props.length;
+
+        if (reset) container.innerHTML = '';
+        countLabel.innerText = `${total.toLocaleString('pt-PT')} anúncios`;
+
+        if (props.length === 0 && reset) {
+          container.innerHTML = `<p class="texto-suave">Nenhum anúncio encontrado para estes filtros.</p>`;
+          loadMoreWrap.style.display = 'none';
+          return;
+        }
+
+        container.insertAdjacentHTML('beforeend', props.map(renderAnuncioRow).join(''));
+
+        currentOffset += props.length;
+        if (currentOffset < total) {
+          loadMoreWrap.style.display = 'flex';
+          document.getElementById('load-more-btn').innerText = `Mostrar mais (${currentOffset} de ${total.toLocaleString('pt-PT')})`;
+        } else {
+          loadMoreWrap.style.display = 'none';
+        }
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = `<p class="texto-suave">Erro ao carregar anúncios.</p>`;
+      }
+    }
+
+    function renderPositioningBlock(title, subtitle, dist, unitSuffix) {
+      if (!dist) {
+        return `
+          <div class="leitura pilha">
+            <div>
+              <h3 class="leitura__titulo">${title}</h3>
+              <p class="texto-suave texto-pequeno">${subtitle}</p>
+            </div>
+            <p class="texto-suave texto-pequeno">Este anúncio não tem dados suficientes para comparar nesta métrica.</p>
+          </div>
+        `;
+      }
+
+      const dotsSvg = (dist.dots || []).map(x => `<circle class="posicionamento__ponto" cx="${x}" cy="22" r="2.5"></circle>`).join('');
+      const t = dist.target;
+      let targetSvg = '';
+      let mainValHtml = '';
+      let diffHtml = '';
+      let rankHtml = '';
+
+      if (t) {
+        targetSvg = `
+          <line class="posicionamento__anuncio" x1="${t.x}" y1="4" x2="${t.x}" y2="40"></line>
+          <circle class="posicionamento__anuncio-ponto" cx="${t.x}" cy="22" r="4.5"></circle>
+        `;
+        const tagClass = t.tone === 'success' ? 'etiqueta--sucesso' : (t.tone === 'warning' ? 'etiqueta--aviso' : 'etiqueta--neutro');
+        const sign = t.diff > 0 ? '+' : '';
+        mainValHtml = `
+          <div style="display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;">
+            <span class="anuncio__preco anuncio__preco--grande">${t.value.toLocaleString('pt-PT')} ${unitSuffix}</span>
+            <span class="etiqueta ${tagClass}">${t.label}</span>
+          </div>
+        `;
+        diffHtml = `
+          <p>
+            Mediana dos comparáveis: <strong>${dist.median.toLocaleString('pt-PT')} ${unitSuffix}</strong>
+            — este anúncio está <span class="etiqueta ${tagClass}">${sign}${t.diff.toLocaleString('pt-PT')} ${unitSuffix} (${sign}${t.diff_pct} %)</span>
+          </p>
+        `;
+        rankHtml = `
+          <p class="texto-suave texto-pequeno">
+            Mais caro do que ${t.percentile_rank} % dos comparáveis (mínimo ${dist.min.toLocaleString('pt-PT')} ${unitSuffix}, máximo ${dist.max.toLocaleString('pt-PT')} ${unitSuffix}).
+          </p>
+        `;
+      }
+
+      return `
+        <div class="leitura pilha">
+          <div>
+            <h3 class="leitura__titulo">${title}</h3>
+            <p class="texto-suave texto-pequeno">${subtitle}</p>
+          </div>
+          ${mainValHtml}
+          ${diffHtml}
+          <svg class="posicionamento" viewBox="0 0 320 44" width="320" height="44" role="img">
+            <line class="posicionamento__eixo" x1="12" y1="22" x2="308" y2="22"></line>
+            <rect class="posicionamento__faixa" x="${dist.x_p10}" y="15" width="${Math.max(4, dist.x_p90 - dist.x_p10)}" height="14" rx="3"></rect>
+            <rect class="posicionamento__caixa" x="${dist.x_p25}" y="15" width="${Math.max(4, dist.x_p75 - dist.x_p25)}" height="14" rx="3"></rect>
+            <line class="posicionamento__mediana" x1="${dist.x_median}" y1="11" x2="${dist.x_median}" y2="33"></line>
+            ${dotsSvg}
+            ${targetSvg}
+          </svg>
+          <p class="posicionamento__legenda texto-suave texto-pequeno">
+            <span>p10 ${dist.p10.toLocaleString('pt-PT')} ${unitSuffix}</span>
+            <span>mediana ${dist.median.toLocaleString('pt-PT')} ${unitSuffix}</span>
+            <span>p90 ${dist.p90.toLocaleString('pt-PT')} ${unitSuffix}</span>
+          </p>
+          ${rankHtml}
+        </div>
+      `;
+    }
+
+    async function openPropertyDetail(propId) {
+      switchTab('detail');
+      const body = document.getElementById('detail-view-body');
+      body.innerHTML = `<p class="texto-suave">A carregar ficha do anúncio...</p>`;
+
+      try {
+        const res = await fetch(`/api/property/${encodeURIComponent(propId)}`);
+        if (!res.ok) throw new Error('Não encontrado');
+        const d = await res.json();
+        const comp = d.comparables || {};
+
+        const priceBlock = renderPositioningBlock(
+          'Preço total',
+          'O que se pede ao todo pelo imóvel.',
+          comp.price_distribution,
+          '€'
+        );
+
+        const m2Subtitle = d.area_m2
+          ? `Este anúncio declara ${d.area_m2} m²${comp.median_area ? `; a mediana da amostra é ${comp.median_area} m².` : '.'}`
+          : 'Área não indicada pelo portal.';
+
+        const m2Block = renderPositioningBlock(
+          'Preço por m²',
+          m2Subtitle,
+          d.price_per_m2 ? comp.m2_distribution : null,
+          '€/m²'
+        );
+
+        const historyItems = (d.price_history && d.price_history.length > 0)
+          ? `<ul class="historico">` + d.price_history.map(h => `
+              <li class="historico__linha">
+                <span class="historico__data">${h.detected_at}</span>
+                <span class="historico__valor">${h.old_price} &rarr; ${h.new_price} (${h.change_pct} %)</span>
+              </li>
+            `).join('') + `</ul>`
+          : `<p class="texto-suave texto-pequeno">Sem alterações de preço registadas desde a primeira recolha.</p>`;
+
+        const similarSection = (d.similar_listings && d.similar_listings.length > 0)
+          ? `
+            <div class="cartao">
+              <div class="cartao__cabecalho cartao__cabecalho--empilhado">
+                <h2 class="cartao__titulo">Anúncios semelhantes na mesma freguesia</h2>
+                <p class="texto-suave texto-pequeno">Mesma tipologia e freguesia com preço dentro de ±3 %.</p>
+              </div>
+              <div class="cartao__corpo">
+                <div class="tabela-rolavel">
+                  <table class="tabela tabela--compacta">
+                    <thead>
+                      <tr><th>Portal</th><th>Título</th><th class="numero">Preço</th><th>Descoberto</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                      ${d.similar_listings.map(s => `
+                        <tr>
+                          <td>${s.site}</td>
+                          <td>${s.title}</td>
+                          <td class="numero">${s.price}</td>
+                          <td>${s.found_at}</td>
+                          <td><a href="${s.url}" target="_blank" rel="noopener">Abrir no portal</a></td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          `
+          : '';
+
+        body.innerHTML = `
+          <div class="ficha-topo ${d.image_url ? 'ficha-topo--com-foto' : ''}">
+            ${d.image_url ? `<img class="anuncio__imagem anuncio__imagem--grande" src="${d.image_url}" alt="">` : ''}
+            <div class="ficha-topo__corpo">
+              <div class="ficha-topo__identidade">
+                <h1 class="ficha-topo__titulo">${d.title}</h1>
+                <p class="anuncio__etiquetas">
+                  <span class="etiqueta etiqueta--neutro">${d.site}</span>
+                  <span class="etiqueta ${d.is_active ? 'etiqueta--sucesso' : 'etiqueta--neutro'}">${d.is_active ? 'Activo' : 'Removido'}</span>
+                  ${d.opportunity_score >= 78 ? '<span class="etiqueta etiqueta--sucesso">abaixo do mercado</span>' : ''}
+                </p>
+              </div>
+
+              <p class="ficha-topo__preco">
+                <span class="anuncio__preco anuncio__preco--grande">${d.price}</span>
+              </p>
+
+              <dl class="factos">
+                <div class="factos__item">
+                  <dt class="factos__rotulo">Tipologia</dt>
+                  <dd class="factos__valor">${d.typology}</dd>
+                </div>
+                <div class="factos__item">
+                  <dt class="factos__rotulo">Freguesia</dt>
+                  <dd class="factos__valor">${d.parish}</dd>
+                </div>
+                <div class="factos__item">
+                  <dt class="factos__rotulo">Área</dt>
+                  <dd class="factos__valor">${d.area_m2 ? d.area_m2 + ' m²' : '—'}</dd>
+                </div>
+                <div class="factos__item">
+                  <dt class="factos__rotulo">Preço / m²</dt>
+                  <dd class="factos__valor">${d.price_per_m2 ? d.price_per_m2.toLocaleString('pt-PT') + ' €/m²' : '—'}</dd>
+                </div>
+                <div class="factos__item">
+                  <dt class="factos__rotulo">Tipo</dt>
+                  <dd class="factos__valor">${d.property_type}</dd>
+                </div>
+                <div class="factos__item">
+                  <dt class="factos__rotulo">Concelho</dt>
+                  <dd class="factos__valor">Barcelos</dd>
+                </div>
+              </dl>
+
+              <a class="botao botao--primario" style="align-self:flex-start;" href="${d.url}" target="_blank" rel="noopener">Abrir no portal (${d.site})</a>
+            </div>
+          </div>
+
+          <div class="cartao">
+            <div class="cartao__cabecalho cartao__cabecalho--empilhado">
+              <h2 class="cartao__titulo">Como se compara</h2>
+              <p class="texto-suave texto-pequeno texto-legivel">
+                Contra <strong>${comp.sample_count || 0} imóveis</strong> semelhantes (${comp.typology} à venda em Barcelos). Mediana e percentis, nunca média.
+              </p>
+            </div>
+            <div class="cartao__corpo pilha">
+              <div class="grelha grelha--2">
+                ${priceBlock}
+                ${m2Block}
+              </div>
+            </div>
+          </div>
+
+          <div class="grelha grelha--2">
+            <div class="cartao">
+              <div class="cartao__cabecalho cartao__cabecalho--empilhado">
+                <h2 class="cartao__titulo">Histórico de preços</h2>
+              </div>
+              <div class="cartao__corpo pilha">
+                ${historyItems}
+              </div>
+            </div>
+
+            <div class="cartao">
+              <div class="cartao__cabecalho cartao__cabecalho--empilhado">
+                <h2 class="cartao__titulo">Tempo e verificação</h2>
+              </div>
+              <div class="cartao__corpo pilha-apertada">
+                <p>Visto pela 1.ª vez em ${d.found_at_str} (${d.found_age})</p>
+                <p class="texto-suave texto-pequeno">É a primeira vez que o robô o recolheu, não a data de publicação original.</p>
+                <p>Última verificação ${d.last_seen_age}</p>
+              </div>
+            </div>
+          </div>
+
+          ${similarSection}
+        `;
+      } catch (e) {
+        console.error(e);
+        body.innerHTML = `<p class="texto-suave">Não foi possível carregar os detalhes deste anúncio.</p>`;
+      }
+    }
+
+    function closePropertyDetail() {
+      switchTab(lastActiveTab || 'catalog');
+    }
+
+    async function fetchAnalytics() {
+      try {
+        const res = await fetch('/api/analytics/full');
+        const data = await res.json();
+        const kpis = data.kpis;
+        const sample = data.sample;
+
+        document.getElementById('stat-total-active').innerText = sample.total_active.toLocaleString('pt-PT');
+        document.getElementById('stat-sale-with-price').innerText = sample.sale_with_price.toLocaleString('pt-PT');
+        document.getElementById('stat-with-area').innerText = sample.with_area.toLocaleString('pt-PT');
+
+        document.getElementById('sample-breakdown-tbody').innerHTML = `
+          <tr>
+            <td>Não têm área declarada no anúncio</td>
+            <td class="numero">${sample.no_area.toLocaleString('pt-PT')}</td>
+          </tr>
+          <tr>
+            <td>Não têm preço (sob consulta)</td>
+            <td class="numero">${sample.no_price.toLocaleString('pt-PT')}</td>
+          </tr>
+          <tr>
+            <td>Valores simbólicos ou arrendamentos (&le; 2 500 €)</td>
+            <td class="numero">${sample.rent_or_low.toLocaleString('pt-PT')}</td>
+          </tr>
+        `;
+
+        document.getElementById('kpi-median-price').innerText = fmtEuro(kpis.median_price);
+        document.getElementById('kpi-iqr-subtext').innerText = `metade entre ${fmtEuro(kpis.p25_price)} e ${fmtEuro(kpis.p75_price)}`;
+        document.getElementById('kpi-avg-m2').innerText = kpis.median_m2 ? `${kpis.median_m2.toLocaleString('pt-PT')} €/m²` : '—';
+        document.getElementById('kpi-m2-subtext').innerText = `n = ${kpis.n_m2}`;
+        document.getElementById('kpi-median-area').innerText = kpis.median_area ? `${kpis.median_area} m²` : '—';
+
+        document.getElementById('kpi-age-median').innerText = `${kpis.median_age_days} dias`;
+        document.getElementById('kpi-age-iqr').innerText = `metade entre ${kpis.p25_age_days} e ${kpis.p75_age_days} dias`;
+        document.getElementById('kpi-drops').innerText = kpis.total_price_drops;
+        document.getElementById('kpi-deals').innerText = kpis.total_deals;
+
+        document.getElementById('table-by-typology').innerHTML = data.by_typology.map(t => `
+          <tr class="${t.is_robust ? '' : 'quadro__fina'}">
+            <td>${t.typology}</td>
+            <td class="numero quadro__valor">${t.median_m2 ? t.median_m2.toLocaleString('pt-PT') + ' €/m²' : '—'}</td>
+            <td class="quadro__barra">
+              ${t.is_robust
+                ? `<div class="barra"><div class="barra__preenchimento" style="width:${t.bar_pct}%"></div></div>`
+                : `<span class="texto-pequeno">amostra fina</span>`}
+            </td>
+            <td class="numero quadro__valor">${fmtEuro(t.median_price)}</td>
+            <td class="numero">${t.count}</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('table-by-type').innerHTML = data.by_type.map(t => `
+          <tr>
+            <td>${t.type.toLowerCase()}</td>
+            <td class="numero quadro__valor">${t.median_m2 ? t.median_m2.toLocaleString('pt-PT') + ' €/m²' : '—'}</td>
+            <td class="quadro__barra">
+              <div class="barra"><div class="barra__preenchimento" style="width:${t.bar_pct}%"></div></div>
+            </td>
+            <td class="numero quadro__valor">${fmtEuro(t.median_price)}</td>
+            <td class="numero">${t.count}</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('table-by-parish').innerHTML = data.by_parish.map(p => `
+          <tr class="${p.is_robust ? '' : 'quadro__fina'}" style="cursor:pointer;" onclick="filterByParishFromTable('${p.parish.replace(/'/g, "\\'")}')">
+            <td>${p.parish}</td>
+            <td class="numero quadro__valor">${fmtEuro(p.median_price)}</td>
+            <td class="quadro__barra">
+              ${p.is_robust
+                ? `<div class="barra"><div class="barra__preenchimento" style="width:${p.bar_pct}%"></div></div>`
+                : `<span class="texto-pequeno">amostra fina</span>`}
+            </td>
+            <td class="numero quadro__valor">${fmtEuro(p.avg_price)}</td>
+            <td class="numero quadro__valor">${fmtEuro(p.min_price)} – ${fmtEuro(p.max_price)}</td>
+            <td class="numero">${p.count}</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('price-brackets-container').innerHTML = data.price_brackets.map(b => `
+          <div>
+            <p class="texto-pequeno">
+              ${b.label}
+              <span class="texto-suave numero"> — ${b.count} imóveis · ${b.pct} %</span>
+            </p>
+            <div class="barra"><div class="barra__preenchimento" style="width:${b.bar_pct}%"></div></div>
+          </div>
+        `).join('');
+
+        document.getElementById('table-by-site').innerHTML = data.by_site.map(s => `
+          <tr>
+            <td>${s.site}</td>
+            <td class="numero quadro__valor">${s.share_pct} %</td>
+            <td class="quadro__barra">
+              <div class="barra"><div class="barra__preenchimento" style="width:${s.bar_pct}%"></div></div>
+            </td>
+            <td class="numero quadro__valor">${s.median_price ? fmtEuro(s.median_price) : '—'}</td>
+            <td class="numero">${s.count}</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('age-brackets-container').innerHTML = data.age_brackets.map(b => `
+          <div>
+            <p class="texto-pequeno">
+              ${b.label}
+              <span class="texto-suave numero"> — ${b.count} imóveis · ${b.pct} %</span>
+            </p>
+            <div class="barra"><div class="barra__preenchimento" style="width:${b.bar_pct}%"></div></div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function fetchDealsAndDrops() {
+      try {
+        const [dealsRes, dropsRes] = await Promise.all([
+          fetch('/api/analytics/deals'),
+          fetch('/api/analytics/price-drops')
+        ]);
+        const deals = await dealsRes.json();
+        const drops = await dropsRes.json();
+
+        const dealsList = document.getElementById('deals-list');
+        if (deals.length === 0) {
+          dealsList.innerHTML = `<p class="texto-suave">Sem oportunidades registadas.</p>`;
+        } else {
+          dealsList.innerHTML = deals.map(d => {
+            const safeId = (d.id || '').replace(/'/g, "\\'");
+            return `
+              <div class="anuncio">
+                <div class="anuncio__corpo">
+                  <a class="anuncio__titulo" onclick="openPropertyDetail('${safeId}')">${d.title}</a>
+                  <p class="anuncio__meta">${d.typology} · ${d.parish} · ${d.site}</p>
+                </div>
+                <div class="anuncio__preco">
+                  ${d.price}
+                  <p class="texto-suave texto-pequeno"><span class="etiqueta etiqueta--sucesso">Score ${d.score}</span></p>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        const dropsList = document.getElementById('drops-list');
+        if (drops.length === 0) {
+          dropsList.innerHTML = `<p class="texto-suave">Sem descidas de preço registadas.</p>`;
+        } else {
+          dropsList.innerHTML = drops.map(dr => {
+            const safeId = (dr.property_id || '').replace(/'/g, "\\'");
+            return `
+              <div class="anuncio">
+                <div class="anuncio__corpo">
+                  <a class="anuncio__titulo" onclick="openPropertyDetail('${safeId}')">${dr.title}</a>
+                  <p class="anuncio__meta">${dr.parish || 'Barcelos'} · ${dr.site} · Antes: <del>${dr.old_price}</del></p>
+                </div>
+                <div class="anuncio__preco">
+                  ${dr.new_price}
+                  <p class="texto-suave texto-pequeno"><span class="etiqueta etiqueta--sucesso">&darr; ${dr.change_pct} % (${dr.change_amount.toLocaleString('pt-PT')} €)</span></p>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function fetchHealth() {
+      if (!isAuthenticated) return;
+      try {
+        const res = await fetch('/api/health');
+        if (!res.ok) return;
+        const data = await res.json();
+        const tbody = document.getElementById('health-list');
+
+        if (!data.latest_run) {
+          tbody.innerHTML = `<tr><td colspan="4" class="texto-suave">Nenhum ciclo registado.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.site_health.map(log => {
+          const badge = log.status === 'success'
+            ? `<span class="etiqueta etiqueta--sucesso">OK</span>`
+            : (log.status === 'empty'
+              ? `<span class="etiqueta etiqueta--neutro">Vazio</span>`
+              : `<span class="etiqueta etiqueta--perigo">Erro</span>`);
+          return `
+            <tr>
+              <td>${log.site}</td>
+              <td>${badge}</td>
+              <td class="numero">${log.found}</td>
+              <td class="numero">${log.duration} s</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function triggerManualScan() {
+      const btn = document.getElementById('trigger-scan-btn');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/trigger', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message || 'Varrimento iniciado.');
+      } catch (e) {
+        showToast('Erro ao iniciar varrimento.');
+      } finally {
+        setTimeout(() => { btn.disabled = false; }, 3000);
+      }
+    }
+
+    async function triggerBackfill() {
+      try {
+        const res = await fetch('/api/admin/backfill', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message || 'Actualização iniciada.');
+      } catch (e) {
+        showToast('Erro ao iniciar actualização.');
+      }
+    }
+
+    function setupWebSocket() {
+      if (!isAuthenticated) return;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socket = new WebSocket(`${protocol}//${window.location.host}/ws/logs`);
+      const terminal = document.getElementById('log-terminal');
+
+      socket.onmessage = (event) => {
+        const line = document.createElement('div');
+        line.className = 'log-linha';
+        if (event.data.includes('[ERROR]') || event.data.includes('Erro')) line.classList.add('erro');
+        if (event.data.includes('✅') || event.data.includes('NOVA')) line.classList.add('sucesso');
+        line.innerText = event.data;
+        terminal.appendChild(line);
+        terminal.scrollTop = terminal.scrollHeight;
+        if (terminal.children.length > 200) terminal.removeChild(terminal.firstChild);
+      };
+    }
+
+    initTheme();
+    checkAuthStatus();
+    loadFilterOptions();
+    loadProperties(true);
+  </script>
+</body>
 </html>
