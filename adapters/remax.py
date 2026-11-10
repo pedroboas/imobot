@@ -26,7 +26,7 @@ def _extract_from_api_results(results):
                 url = "https://www.remax.pt" + url
 
         price_val = item.get('listingPrice') or item.get('price')
-        if price_val:
+        if price_val and float(price_val) > 0:
             try:
                 price = f"{int(float(price_val)):,} €".replace(',', '.')
             except (ValueError, TypeError):
@@ -36,8 +36,27 @@ def _extract_from_api_results(results):
         
         prop_id = listing_id or (hashlib.md5(url.encode()).hexdigest() if url else "")
         
-        # Image
-        image_url = extract_image_from_dict(item)
+        # Image extraction for RE/MAX
+        image_url = None
+        listing_picture = item.get('listingPictureUrl')
+        if listing_picture and isinstance(listing_picture, str):
+            if listing_picture.startswith('http'):
+                image_url = listing_picture
+            else:
+                image_url = f"https://i.maxwork.pt/l-view/{listing_picture.lstrip('/')}"
+        
+        if not image_url and item.get('listingPictures'):
+            pics = item.get('listingPictures')
+            if isinstance(pics, list) and pics:
+                first_pic = pics[0]
+                if isinstance(first_pic, str):
+                    if first_pic.startswith('http'):
+                        image_url = first_pic
+                    else:
+                        image_url = f"https://i.maxwork.pt/l-view/{first_pic.lstrip('/')}"
+                        
+        if not image_url:
+            image_url = extract_image_from_dict(item)
 
         if prop_id and url:
             properties.append({
@@ -110,7 +129,7 @@ def parse_remax(html_content, api_data=None):
             pass
 
     # Strategy 3: Parse rendered DOM (client-side rendered content)
-    cards = soup.find_all('div', attrs={'data-id': re.compile(r'listing-card', re.I)})
+    cards = soup.find_all(['div', 'a'], attrs={'data-id': re.compile(r'listing-card', re.I)})
     if not cards:
         cards = soup.find_all('a', href=re.compile(r'/(?:pt/)?imoveis/.*?\d+-\d+', re.I))
     
@@ -146,7 +165,7 @@ def parse_remax(html_content, api_data=None):
                 title = link.get('title', 'Remax Property') or 'Remax Property'
 
             card_text = card.get_text(separator=" ", strip=True)
-            price_match = re.search(r'(\d+[\s.\u00a0]\d{3}(?:[\s.\u00a0]\d+)?)\s*€', card_text)
+            price_match = re.search(r'(\d+[\s.\u00a0]?\d{3}(?:[\s.\u00a0]\d+)?)\s*€', card_text)
             if price_match:
                 price = price_match.group(0).strip()
             elif 'consulta' in card_text.lower():
@@ -169,4 +188,3 @@ def parse_remax(html_content, api_data=None):
             continue
             
     return properties
-

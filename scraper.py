@@ -106,7 +106,7 @@ SITE_WAIT_SELECTORS = {
     "factorvalor.pt": ".propertyItem, .propertyItemWrap",
     "h-urb.com": ".propertyItem, .propertyItemWrap",
     "zome.pt": "a[href*='/imovel/'], .ListingPreviewItem, [class*='ListingPreview']",
-    "remax.pt": "a[data-id='listing-card-link'], div[data-id='listing-card-container'] a",
+    "remax.pt": "a[data-id='listing-card-link'], a[href*='/pt/imoveis/']",
     "era.pt": "a[href*='/imovel/'], a.card__gallery",
     "barcelcasa.pt": ".propertyItem, .propertyItemWrap",
     "haconchego.pt": ".propertyItem, .propertyItemWrap",
@@ -200,12 +200,16 @@ def get_parser(url):
     return None
 
 def clean_price_value(price_str):
-    if not price_str or "consulta" in price_str.lower():
+    if not price_str or "consulta" in str(price_str).lower():
         return 0
-    cleaned = re.sub(r'[,.]\d{2}(?=\s*(?:€|eur|$))', '', price_str, flags=re.IGNORECASE)
+    s = str(price_str).strip()
+    if s.startswith("-"):
+        return 0
+    cleaned = re.sub(r'[,.]\d{2}(?=\s*(?:€|eur|$))', '', s, flags=re.IGNORECASE)
     numeric_str = "".join(re.findall(r'\d+', cleaned))
     try:
-        return int(numeric_str) if numeric_str else 0
+        val = int(numeric_str) if numeric_str else 0
+        return val if val > 0 else 0
     except ValueError:
         return 0
 
@@ -342,14 +346,16 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
             # Network interception for sites with hidden/dynamic APIs (like Remax, Century 21)
             api_data = {}
             async def log_response(response):
-                if "PaginatedMultiMatchSearch" in response.url or ("remax.pt" in response.url and "search" in response.url.lower()) or "century21.pt/api/properties" in response.url:
-                    try:
-                        text = await response.text()
-                        if "results" in text or "properties" in text:
-                            api_data['json'] = text
-                            logger.info(f"Interceção de API bem-sucedida para {response.url[:60]}...")
-                    except:
-                        pass
+                try:
+                    url_lower = response.url.lower()
+                    if "paginatedmultimatchsearch" in url_lower or ("remax.pt" in url_lower and "search" in url_lower) or "century21.pt/api/properties" in url_lower:
+                        if response.status == 200:
+                            data = await response.json()
+                            if isinstance(data, dict) and ("results" in data or "properties" in data):
+                                api_data['json'] = data
+                                logger.info(f"Interceção de API bem-sucedida para {response.url[:60]}...")
+                except Exception:
+                    pass
             page.on("response", log_response)
             
             attempt_str = f" (Tentativa {attempt+1}/{max_retries})" if attempt > 0 else ""
@@ -401,11 +407,58 @@ async def scrape_site(browser_manager, search_url, counter_text, run_id=""):
                         break
                     await asyncio.sleep(0.5)
 
+            # Direct in-page fetch fallback for RE/MAX if response interception didn't capture it
+            if "remax.pt" in search_url and 'json' not in api_data:
+                try:
+                    logger.info("Tentando fetch direto da API RE/MAX via browser context...")
+                    fallback_data = await page.evaluate("""
+                        async () => {
+                            try {
+                                const body = {
+                                    "filters": [
+                                        {"field":"businessTypeID","operationType":"int","operator":"=","value":"1","label":"buy"},
+                                        {"field":"Region2ID","operationType":"string","operator":"=","value":"405"},
+                                        {"field":"coordinates","operator":"Range","operationType":"coordinates","value":"41.6784133;-8.7710292;41.3900137;-8.4694068"},
+                                        {"field":"listingTypeID","operationType":"multiple","operator":"=","value":"1,11"},
+                                        {"field":"listingPrice","operationType":"int","operator":"Range","value":";280000"},
+                                        {"field":"numberOfBedrooms","operationType":"int","operator":"Range","value":"2;"},
+                                        {"field":"listingClassID","operationType":"int","operator":"=","value":"1"},
+                                        {"field":"isSpecialExclusive","operator":"=","operationType":"string","value":"false"}
+                                    ],
+                                    "pageNumber": 1,
+                                    "pageSize": 20,
+                                    "sort": ["-PublishDate"],
+                                    "searchValue": "Barcelos",
+                                    "precision": 13
+                                };
+                                const res = await fetch('/api/Listing/PaginatedMultiMatchSearchWithGeoHash', {
+                                    method: 'POST',
+                                    headers: {
+                                        'content-type': 'application/json',
+                                        'tenantid': '7',
+                                        'languageid': '9',
+                                        'x-app-platform': 'web'
+                                    },
+                                    body: JSON.stringify(body)
+                                });
+                                return await res.json();
+                            } catch(e) {
+                                return null;
+                            }
+                        }
+                    """)
+                    if fallback_data and isinstance(fallback_data, dict) and "results" in fallback_data:
+                        api_data['json'] = fallback_data
+                        logger.info(f"Fetch direto da API RE/MAX bem-sucedido ({len(fallback_data['results'])} resultados)")
+                except Exception as e:
+                    logger.warning(f"Fetch direto RE/MAX falhou: {e}")
+
             # Inject intercepted API data into DOM if available
             if 'json' in api_data:
                 logger.info("Injecting intercepted API data into DOM...")
                 try:
-                    json_str = api_data['json']
+                    import json as _json
+                    json_str = _json.dumps(api_data['json']) if isinstance(api_data['json'], dict) else api_data['json']
                     await page.evaluate("""(jsonStr) => {
                         const script = document.createElement('script');
                         script.id = '__REMAX_API_DATA__';
